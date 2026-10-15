@@ -1,21 +1,35 @@
 import { Module } from '@nestjs/common';
-import { createObserveModule } from '@nestjs/observe';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
+import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from './database/database.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsuariosModule } from './modules/usuarios/usuarios.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { ClientesModule } from './modules/clientes/clientes.module';
+import { MonedasModule } from './modules/monedas/monedas.module';
+import { TiposCambioModule } from './modules/tipos-cambio/tipos-cambio.module';
+import { OperacionesModule } from './modules/operaciones/operaciones.module';
+import { MovimientosCajaModule } from './modules/movimientos-caja/movimientos-caja.module';
+import { CortesCajaModule } from './modules/cortes-caja/cortes-caja.module';
+import { AsistenteIaModule } from './modules/asistente-ia/asistente-ia.module';
 
 @Module({
   imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'divix-backend',
-    }),
+    // Carga el archivo .env y lo deja disponible en toda la app
+    ConfigModule.forRoot({ isGlobal: true }),
+
+    // MySQL o base JSON temporal, según DB_DRIVER en el .env
+    DatabaseModule.forRoot(),
+
+    AuthModule,
+    UsuariosModule,
+    RolesModule,
+    ClientesModule,
+    MonedasModule,
+    TiposCambioModule,
+    OperacionesModule,
+    MovimientosCajaModule,
+    CortesCajaModule,
+    AsistenteIaModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

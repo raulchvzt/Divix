@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "activo": true,
+    "fechaRegistro": "2026-10-15T04:15:13.981Z",
+    "nombre": "Administrador",
+    "apellidoPaterno": "Demo",
+    "usuario": "admin",
+    "contrasenaHash": "$2b$10$mXvzwr9usnmXKgTbk3ONmeYZb2xLxbcmPSOGWdKQusrczhT.ovmGq",
+    "fechaActualizacion": "2026-10-15T04:15:13.981Z",
+    "rolId": 1
+  },
+  {
+    "id": 2,
+    "activo": true,
+    "fechaRegistro": "2026-10-15T04:15:13.987Z",
+    "nombre": "Cajero",
+    "apellidoPaterno": "Demo",
+    "usuario": "cajero1",
+    "contrasenaHash": "$2b$10$mXvzwr9usnmXKgTbk3ONmeYZb2xLxbcmPSOGWdKQusrczhT.ovmGq",
+    "fechaActualizacion": "2026-10-15T04:15:13.987Z",
+    "rolId": 2
+  },
+  {
+    "id": 3,
+    "activo": true,
+    "fechaRegistro": "2026-10-15T04:15:13.994Z",
+    "nombre": "Supervisor",
+    "apellidoPaterno": "Demo",
+    "usuario": "supervisor1",
+    "contrasenaHash": "$2b$10$mXvzwr9usnmXKgTbk3ONmeYZb2xLxbcmPSOGWdKQusrczhT.ovmGq",
+    "fechaActualizacion": "2026-10-15T04:15:13.994Z",
+    "rolId": 3
+  }
+]

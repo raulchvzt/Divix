@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "fechaVigencia": "2026-10-15T04:15:14.007Z",
+    "tipoCambioCompra": "17.5000",
+    "tipoCambioVenta": "18.2000",
+    "monedaId": 1,
+    "usuarioId": 1
+  },
+  {
+    "id": 2,
+    "fechaVigencia": "2026-10-15T04:15:14.079Z",
+    "tipoCambioCompra": "19.0000",
+    "tipoCambioVenta": "19.9000",
+    "monedaId": 2,
+    "usuarioId": 1
+  }
+]
