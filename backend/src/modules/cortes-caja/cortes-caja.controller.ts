@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { CortesCajaService } from '../../services/cortes-caja.service';
 import { AbrirCorteDto } from '../../dto/cortes-caja/abrir-corte.dto';
+import { CrearMovimientoCajaDto } from '../../dto/movimientos-caja/crear-movimiento-caja.dto';
 import { CerrarCorteDto } from '../../dto/cortes-caja/cerrar-corte.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -31,6 +32,22 @@ export class CortesCajaController {
   @Get('activo')
   corteActivo(@CurrentUser('sub') idUsuario: number) {
     return this.cortesCajaService.corteActivo(idUsuario);
+  }
+
+  @Roles('cajero', 'administrador')
+  @Get('ultimo-cierre')
+  ultimoCierre(@CurrentUser('sub') idUsuario: number) {
+    return this.cortesCajaService.ultimoCierre(idUsuario);
+  }
+
+  @Roles('cajero', 'administrador')
+  @Post(':id/movimientos')
+  registrarMovimiento(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CrearMovimientoCajaDto,
+    @CurrentUser('sub') idUsuario: number,
+  ) {
+    return this.cortesCajaService.registrarMovimiento(id, dto, idUsuario);
   }
 
   @Roles('cajero', 'administrador')

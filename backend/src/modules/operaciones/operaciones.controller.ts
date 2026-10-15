@@ -20,9 +20,11 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class OperacionesController {
   constructor(private readonly operacionesService: OperacionesService) {}
 
-  @Roles('supervisor', 'administrador')
+  // El cajero solo ve sus propias operaciones; supervisor y administrador ven todas.
+  @Roles('cajero', 'supervisor', 'administrador')
   @Get()
   listar(
+    @CurrentUser() usuario: { sub: number; rol: string },
     @Query('fechaInicio') fechaInicio?: string,
     @Query('fechaFin') fechaFin?: string,
     @Query('idCliente') idCliente?: number,
@@ -32,7 +34,7 @@ export class OperacionesController {
       fechaInicio: fechaInicio ? new Date(fechaInicio) : undefined,
       fechaFin: fechaFin ? new Date(fechaFin) : undefined,
       idCliente,
-      idUsuario,
+      idUsuario: usuario.rol === 'cajero' ? usuario.sub : idUsuario,
     });
   }
 

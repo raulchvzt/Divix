@@ -13,7 +13,8 @@ export class MonedasService {
   ) {}
 
   listar() {
-    return this.monedasRepo.find({ where: { activo: true } });
+    // Incluye las desactivadas: la pantalla de Configuración las muestra para poder reactivarlas.
+    return this.monedasRepo.find({ order: { id: 'ASC' } });
   }
 
   async obtenerPorId(id: number) {
@@ -23,15 +24,22 @@ export class MonedasService {
   }
 
   async crear(dto: CrearMonedaDto) {
-    const existente = await this.monedasRepo.findOne({ where: { codigo: dto.codigo } });
+    const existente = await this.monedasRepo.findOne({ where: { codigo: dto.codigo.toUpperCase() } });
     if (existente) throw new ConflictException('Ya existe una moneda con ese código');
-    const moneda = this.monedasRepo.create(dto);
+    const codigo = dto.codigo.toUpperCase();
+    const moneda = this.monedasRepo.create({ ...dto, codigo, simbolo: dto.simbolo ?? codigo });
     return this.monedasRepo.save(moneda);
   }
 
   async actualizar(id: number, dto: ActualizarMonedaDto) {
     const moneda = await this.obtenerPorId(id);
     Object.assign(moneda, dto);
+    return this.monedasRepo.save(moneda);
+  }
+
+  async activar(id: number) {
+    const moneda = await this.obtenerPorId(id);
+    moneda.activo = true;
     return this.monedasRepo.save(moneda);
   }
 

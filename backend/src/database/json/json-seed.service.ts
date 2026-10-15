@@ -50,6 +50,7 @@ export class JsonSeedService implements OnModuleInit {
             nombre,
             apellidoPaterno: 'Demo',
             usuario,
+            correo: `${usuario}@divix.mx`,
             contrasenaHash,
             rol: { id: rol!.id },
           }),

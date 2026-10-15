@@ -30,6 +30,12 @@ export class MonedasController {
   }
 
   @Roles('administrador')
+  @Patch(':id/activar')
+  activar(@Param('id', ParseIntPipe) id: number) {
+    return this.monedasService.activar(id);
+  }
+
+  @Roles('administrador')
   @Patch(':id/desactivar')
   desactivar(@Param('id', ParseIntPipe) id: number) {
     return this.monedasService.desactivar(id);

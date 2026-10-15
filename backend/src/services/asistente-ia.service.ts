@@ -26,7 +26,7 @@ export class AsistenteIaService {
     let respuestaTexto: string;
     try {
       const mensaje = await this.client.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
         max_tokens: 500,
         system:
           'Eres un asistente para una casa de cambio. Respondes de forma breve y clara. ' +

@@ -1,9 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import Decimal from 'decimal.js';
 import { MovimientoCaja, TipoMovimiento } from '../entities/movimiento-caja.entity';
-import { CrearMovimientoCajaDto } from '../dto/movimientos-caja/crear-movimiento-caja.dto';
 
 @Injectable()
 export class MovimientosCajaService {
@@ -12,20 +11,26 @@ export class MovimientosCajaService {
     private readonly movimientosRepo: Repository<MovimientoCaja>,
   ) {}
 
-  async registrar(idCorte: number, dto: CrearMovimientoCajaDto, idUsuario: number) {
-    const monto = new Decimal(dto.monto);
-    if (monto.lte(0)) {
-      throw new BadRequestException('El monto debe ser mayor a cero');
-    }
-
+  /**
+   * Solo guarda. Las reglas (corte abierto, no dejar saldos negativos, etc.)
+   * las valida CortesCajaService.registrarMovimiento, que es la puerta de entrada.
+   */
+  async guardar(datos: {
+    idCorte: number;
+    idUsuario: number;
+    tipoMovimiento: TipoMovimiento;
+    moneda: string;
+    monto: Decimal;
+    concepto: string;
+  }) {
     const movimiento = this.movimientosRepo.create({
-      corte: { id: idCorte } as any,
-      usuario: { id: idUsuario } as any,
-      tipoMovimiento: dto.tipoMovimiento,
-      monto: monto.toFixed(4),
-      concepto: dto.concepto,
+      corte: { id: datos.idCorte } as any,
+      usuario: { id: datos.idUsuario } as any,
+      tipoMovimiento: datos.tipoMovimiento,
+      moneda: datos.moneda,
+      monto: datos.monto.toFixed(4),
+      concepto: datos.concepto,
     });
-
     return this.movimientosRepo.save(movimiento);
   }
 
@@ -35,14 +40,5 @@ export class MovimientosCajaService {
       relations: { usuario: true },
       order: { fechaHora: 'ASC' },
     });
-  }
-
-  /** Suma neta (entradas - salidas) de un corte; usado al cerrarlo. */
-  async netoPorCorte(idCorte: number) {
-    const movimientos = await this.listarPorCorte(idCorte);
-    return movimientos.reduce((acc, mov) => {
-      const monto = new Decimal(mov.monto);
-      return mov.tipoMovimiento === TipoMovimiento.ENTRADA ? acc.plus(monto) : acc.minus(monto);
-    }, new Decimal(0));
   }
 }

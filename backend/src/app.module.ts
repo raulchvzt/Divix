@@ -11,6 +11,7 @@ import { OperacionesModule } from './modules/operaciones/operaciones.module';
 import { MovimientosCajaModule } from './modules/movimientos-caja/movimientos-caja.module';
 import { CortesCajaModule } from './modules/cortes-caja/cortes-caja.module';
 import { AsistenteIaModule } from './modules/asistente-ia/asistente-ia.module';
+import { NegocioModule } from './modules/negocio/negocio.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AsistenteIaModule } from './modules/asistente-ia/asistente-ia.module';
     MovimientosCajaModule,
     CortesCajaModule,
     AsistenteIaModule,
+    NegocioModule,
   ],
 })
 export class AppModule {}

@@ -42,6 +42,26 @@ export class CorteCaja {
   @Column({ name: 'diferencia_caja', type: 'decimal', precision: 15, scale: 4, nullable: true })
   diferenciaCaja: string | null;
 
+  // --- Caja multimoneda ---
+  // efectivoInicial / efectivoFinal = pesos (MXN) del cajero.
+  // La caja fuerte (reserva) y las demás monedas se guardan aparte.
+  @Column({ name: 'reserva_inicial', type: 'decimal', precision: 15, scale: 4, default: 0 })
+  reservaInicial: string;
+
+  @Column({ name: 'reserva_final', type: 'decimal', precision: 15, scale: 4, nullable: true })
+  reservaFinal: string | null;
+
+  // Mapas { USD: '1200.0000', CAD: '0.0000', ... } con las monedas distintas de MXN.
+  @Column({ name: 'saldos_iniciales', type: 'json', nullable: true })
+  saldosIniciales: Record<string, string> | null;
+
+  @Column({ name: 'saldos_finales', type: 'json', nullable: true })
+  saldosFinales: Record<string, string> | null;
+
+  // Diferencia (contado - esperado) por moneda, incluida 'MXN' y 'reserva'. Snapshot al cerrar.
+  @Column({ type: 'json', nullable: true })
+  diferencias: Record<string, string> | null;
+
   @OneToMany(() => MovimientoCaja, (mov) => mov.corte)
   movimientos: MovimientoCaja[];
 }

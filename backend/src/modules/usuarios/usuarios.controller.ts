@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { UsuariosService } from '../../services/usuarios.service';
 import { CrearUsuarioDto } from '../../dto/usuarios/crear-usuario.dto';
@@ -49,8 +50,15 @@ export class UsuariosController {
 
   @Roles('administrador')
   @Patch(':id/desactivar')
-  desactivar(@Param('id', ParseIntPipe) id: number) {
+  desactivar(@Param('id', ParseIntPipe) id: number, @CurrentUser('sub') idActual: number) {
+    if (id === idActual) throw new BadRequestException('No puedes desactivar tu propio usuario');
     return this.usuariosService.desactivar(id);
+  }
+
+  @Roles('administrador')
+  @Patch(':id/activar')
+  activar(@Param('id', ParseIntPipe) id: number) {
+    return this.usuariosService.activar(id);
   }
 
   // Sin @Roles: cualquier usuario autenticado puede cambiar su propia

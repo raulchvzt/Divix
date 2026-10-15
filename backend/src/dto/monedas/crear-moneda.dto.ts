@@ -1,4 +1,4 @@
-import { IsString, Length } from 'class-validator';
+import { IsOptional, IsString, Length } from 'class-validator';
 
 export class CrearMonedaDto {
   @IsString()
@@ -9,7 +9,9 @@ export class CrearMonedaDto {
   @Length(1, 50)
   nombre: string;
 
+  // Opcional: si no se manda, se usa el código (ej. "GBP").
+  @IsOptional()
   @IsString()
   @Length(1, 5)
-  simbolo: string;
+  simbolo?: string;
 }

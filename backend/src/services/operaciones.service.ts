@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual } from 'typeorm';
 import Decimal from 'decimal.js';
 import { Operacion, TipoOperacion } from '../entities/operacion.entity';
 import { CrearOperacionDto } from '../dto/operaciones/crear-operacion.dto';
@@ -28,7 +28,7 @@ export class OperacionesService {
         ...(filtros.idCliente ? { cliente: { id: filtros.idCliente } } : {}),
         ...(filtros.idUsuario ? { usuario: { id: filtros.idUsuario } } : {}),
       },
-      relations: { cliente: true, usuario: true, moneda: true, tipoCambio: true },
+      relations: { cliente: true, usuario: true, moneda: true },
       order: { fechaHora: 'DESC' },
     });
   }
@@ -56,6 +56,9 @@ export class OperacionesService {
         : tipoCambioVigente.tipoCambioVenta;
 
     const cantidad = new Decimal(dto.cantidadDivisa);
+    if (cantidad.lte(0)) {
+      throw new BadRequestException('La cantidad debe ser mayor a cero');
+    }
     const importeTotal = cantidad.mul(tasa);
 
     const nueva = this.operacionesRepo.create({
@@ -70,6 +73,14 @@ export class OperacionesService {
     });
 
     return this.operacionesRepo.save(nueva);
+  }
+
+  /** Operaciones de un usuario desde una fecha (con su moneda), para calcular la caja. */
+  desde(idUsuario: number, fecha: Date) {
+    return this.operacionesRepo.find({
+      where: { usuario: { id: idUsuario }, fechaHora: MoreThanOrEqual(fecha) },
+      relations: { moneda: true },
+    });
   }
 
   /** Totales del día en curso para un usuario, usados al cerrar el corte. */

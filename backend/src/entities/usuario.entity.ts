@@ -32,6 +32,9 @@ export class Usuario {
   @Column({ length: 50, unique: true })
   usuario: string;
 
+  @Column({ length: 150, unique: true, nullable: true })
+  correo: string | null;
+
   // Nunca exponer este campo en respuestas: usar un DTO/serializer que lo excluya.
   @Column({ name: 'contrasena_hash', length: 255, select: false })
   contrasenaHash: string;
