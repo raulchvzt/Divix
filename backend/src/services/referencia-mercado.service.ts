@@ -5,7 +5,8 @@ import Decimal from 'decimal.js';
 import { TipoCambioReferencia } from '../entities/tipo-cambio-referencia.entity';
 import { TiposCambioService } from './tipos-cambio.service';
 
-const FUENTE = 'frankfurter';
+const FRANKFURTER = 'frankfurter';
+const BANXICO = 'banxico';
 const DIAS_HISTORIAL = 40; // lo necesario para variaciones de 7 y 30 días
 const CADA_CUANTO_MS = 12 * 60 * 60 * 1000; // antigüedad máxima de lo descargado
 const REVISAR_CADA_MS = 60 * 60 * 1000;
@@ -38,6 +39,16 @@ export class ReferenciaMercadoService implements OnModuleInit, OnModuleDestroy {
 
   private get activa() {
     return (process.env.REFERENCIA_MERCADO ?? 'on').toLowerCase() !== 'off';
+  }
+  private get tokenBanxico() {
+    return process.env.BANXICO_TOKEN?.trim() || '';
+  }
+  private get urlBanxico() {
+    return (process.env.BANXICO_URL ?? 'https://www.banxico.org.mx/SieAPIRest/service/v1').replace(/\/$/, '');
+  }
+  /** Serie del dólar FIX (pesos por dólar, fecha de determinación). Cámbiala con BANXICO_SERIE_USD. */
+  private get serieUsd() {
+    return process.env.BANXICO_SERIE_USD ?? 'SF43718';
   }
   private get baseUrl() {
     return (process.env.FRANKFURTER_URL ?? 'https://api.frankfurter.dev').replace(/\/$/, '');
@@ -127,6 +138,42 @@ export class ReferenciaMercadoService implements OnModuleInit, OnModuleDestroy {
     throw ultimoError!;
   }
 
+  /** Dólar FIX de Banxico (SIE). Devuelve las filas y el título de la serie para poder verificarla. */
+  private async descargarBanxico(desde: string): Promise<{ filas: Fila[]; titulo: string }> {
+    const hasta = isoDia(new Date());
+    const url = `${this.urlBanxico}/series/${this.serieUsd}/datos/${desde}/${hasta}`;
+    const r = await fetch(url, {
+      headers: { 'Bmx-Token': this.tokenBanxico, Accept: 'application/json' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!r.ok) throw new Error(`Banxico respondió HTTP ${r.status}`);
+    const serie = (await r.json())?.bmx?.series?.[0];
+    if (!serie?.datos?.length) throw new Error('Banxico no devolvió datos para la serie');
+
+    const filas: Fila[] = [];
+    for (const d of serie.datos) {
+      const [dd, mm, aaaa] = String(d.fecha).split('/');
+      const valor = String(d.dato).replace(/,/g, '');
+      if (!aaaa || !/^\d+(\.\d+)?$/.test(valor)) continue; // "N/E" = sin dato
+      filas.push({ fecha: `${aaaa}-${mm}-${dd}`, valor });
+    }
+    return { filas, titulo: String(serie.titulo ?? '') };
+  }
+
+  private async guardarFilas(fuente: string, moneda: string, filas: Fila[]) {
+    const existentes = await this.repo.find({ where: { fuente, moneda } });
+    const ya = new Set(existentes.map((e) => e.fecha));
+    let nuevas = 0;
+    for (const f of filas) {
+      if (ya.has(f.fecha)) continue;
+      const valor = new Decimal(f.valor);
+      if (!valor.isFinite() || valor.lte(0)) continue;
+      await this.repo.save(this.repo.create({ fuente, moneda, fecha: f.fecha, valorMxn: valor.toFixed(6) }));
+      nuevas++;
+    }
+    return nuevas;
+  }
+
   /** Descarga el historial reciente de cada moneda con tipo de cambio y guarda lo que falte. */
   async sincronizar() {
     const vigentes = await this.tiposCambioService.actual();
@@ -134,31 +181,31 @@ export class ReferenciaMercadoService implements OnModuleInit, OnModuleDestroy {
       (c) => c !== 'MXN',
     );
     const desde = sumarDias(isoDia(new Date()), -DIAS_HISTORIAL);
-    const resultado: { moneda: string; nuevas: number; error?: string }[] = [];
+    const resultado: { moneda: string; fuente: string; nuevas: number; serie?: string; error?: string }[] = [];
 
     for (const moneda of monedas) {
-      try {
-        const filas = await this.descargar(moneda, desde);
-        const existentes = await this.repo.find({ where: { fuente: FUENTE, moneda } });
-        const ya = new Set(existentes.map((e) => e.fecha));
-        let nuevas = 0;
-        for (const f of filas) {
-          if (ya.has(f.fecha)) continue;
-          const valor = new Decimal(f.valor);
-          if (!valor.isFinite() || valor.lte(0)) continue;
-          await this.repo.save(
-            this.repo.create({ fuente: FUENTE, moneda, fecha: f.fecha, valorMxn: valor.toFixed(6) }),
-          );
-          nuevas++;
+      // El dólar se toma de Banxico si hay token; si falla (o es otra moneda), de Frankfurter.
+      if (moneda === 'USD' && this.tokenBanxico) {
+        try {
+          const { filas, titulo } = await this.descargarBanxico(desde);
+          const nuevas = await this.guardarFilas(BANXICO, moneda, filas);
+          resultado.push({ moneda, fuente: BANXICO, nuevas, serie: `${this.serieUsd}: ${titulo}` });
+          continue;
+        } catch (e) {
+          this.log.warn(`USD: Banxico falló (${(e as Error).message}); se usa Frankfurter.`);
+          resultado.push({ moneda, fuente: BANXICO, nuevas: 0, error: (e as Error).message });
         }
-        resultado.push({ moneda, nuevas });
+      }
+      try {
+        const nuevas = await this.guardarFilas(FRANKFURTER, moneda, await this.descargar(moneda, desde));
+        resultado.push({ moneda, fuente: FRANKFURTER, nuevas });
       } catch (e) {
         const mensaje = (e as Error).message;
         this.log.warn(`${moneda}: no se pudo descargar la referencia (${mensaje})`);
-        resultado.push({ moneda, nuevas: 0, error: mensaje });
+        resultado.push({ moneda, fuente: FRANKFURTER, nuevas: 0, error: mensaje });
       }
     }
-    this.log.log(`Sincronización: ${resultado.map((r) => `${r.moneda}+${r.nuevas}`).join(', ') || 'sin monedas'}`);
+    this.log.log(`Sincronización: ${resultado.map((r) => `${r.moneda}/${r.fuente}+${r.nuevas}${r.error ? '!' : ''}`).join(', ') || 'sin monedas'}`);
     return resultado;
   }
 
@@ -175,11 +222,14 @@ export class ReferenciaMercadoService implements OnModuleInit, OnModuleDestroy {
     for (const t of vigentes) {
       const moneda = t.moneda.codigo.toUpperCase();
       if (moneda === 'MXN') continue;
-      const filas = await this.repo.find({
-        where: { fuente: FUENTE, moneda },
-        order: { fecha: 'DESC' },
-        take: 60,
-      });
+      // Se usa la fuente con el dato más reciente; si empatan, gana Banxico (referencia oficial).
+      const cargar = (f: string) =>
+        this.repo.find({ where: { fuente: f, moneda }, order: { fecha: 'DESC' }, take: 60 });
+      const [deBanxico, deFrankfurter] = await Promise.all([cargar(BANXICO), cargar(FRANKFURTER)]);
+      const usarBanxico =
+        deBanxico.length > 0 && (!deFrankfurter.length || deBanxico[0].fecha >= deFrankfurter[0].fecha);
+      const fuente = usarBanxico ? BANXICO : FRANKFURTER;
+      const filas = usarBanxico ? deBanxico : deFrankfurter;
       if (!filas.length) continue;
 
       const ultimo = filas[0];
@@ -201,7 +251,10 @@ export class ReferenciaMercadoService implements OnModuleInit, OnModuleDestroy {
 
       salida.push({
         moneda,
-        fuente: 'Frankfurter (referencia de bancos centrales, no precio de ventanilla)',
+        fuente:
+          fuente === BANXICO
+            ? 'Banxico, tipo de cambio FIX (referencia oficial, no precio de ventanilla)'
+            : 'Frankfurter (referencia de bancos centrales, no precio de ventanilla)',
         referencia_mxn: valor.toFixed(4),
         fecha_referencia: ultimo.fecha,
         variacion_7_dias_pct: variacion(7),
