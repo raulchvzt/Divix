@@ -13,8 +13,12 @@ export class AsistenteIaController {
 
   @Roles('cajero', 'supervisor', 'administrador')
   @Post('consultar')
-  consultar(@Body() dto: ConsultarAsistenteDto, @CurrentUser('sub') idUsuario: number) {
-    return this.asistenteIaService.consultar(dto, idUsuario);
+  consultar(
+    @Body() dto: ConsultarAsistenteDto,
+    @CurrentUser('sub') idUsuario: number,
+    @CurrentUser('rol') rol: string,
+  ) {
+    return this.asistenteIaService.consultar(dto, idUsuario, rol);
   }
 
   @Get('historial')
