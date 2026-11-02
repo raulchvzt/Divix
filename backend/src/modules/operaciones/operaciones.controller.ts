@@ -20,8 +20,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class OperacionesController {
   constructor(private readonly operacionesService: OperacionesService) {}
 
-  // El cajero solo ve sus propias operaciones; supervisor y administrador ven todas.
-  @Roles('cajero', 'supervisor', 'administrador')
+  // El cajero solo ve sus propias operaciones; el administrador ve todas.
+  @Roles('cajero', 'administrador')
   @Get()
   listar(
     @CurrentUser() usuario: { sub: number; rol: string },
@@ -47,8 +47,14 @@ export class OperacionesController {
   }
 
   @Get(':id')
-  obtenerPorId(@Param('id', ParseIntPipe) id: number) {
-    return this.operacionesService.obtenerPorId(id);
+  obtenerPorId(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() usuario: { sub: number; rol: string },
+  ) {
+    return this.operacionesService.obtenerPorId(
+      id,
+      usuario.rol === 'cajero' ? usuario.sub : undefined,
+    );
   }
 
   @Roles('cajero', 'administrador')

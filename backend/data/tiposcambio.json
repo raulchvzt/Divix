@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "fechaVigencia": "2026-10-15T04:15:14.007Z",
+    "fechaVigencia": "2026-11-02T16:51:58.487Z",
     "tipoCambioCompra": "17.5000",
     "tipoCambioVenta": "18.2000",
     "monedaId": 1,
@@ -9,7 +9,7 @@
   },
   {
     "id": 2,
-    "fechaVigencia": "2026-10-15T04:15:14.079Z",
+    "fechaVigencia": "2026-11-02T16:51:58.506Z",
     "tipoCambioCompra": "19.0000",
     "tipoCambioVenta": "19.9000",
     "monedaId": 2,

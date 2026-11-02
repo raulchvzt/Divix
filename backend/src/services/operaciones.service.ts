@@ -33,12 +33,15 @@ export class OperacionesService {
     });
   }
 
-  async obtenerPorId(id: number) {
+  /** Si se indica `soloDeUsuario`, la operación debe ser de ese usuario (si no, 404). */
+  async obtenerPorId(id: number, soloDeUsuario?: number) {
     const operacion = await this.operacionesRepo.findOne({
       where: { id },
       relations: { cliente: true, usuario: true, moneda: true, tipoCambio: true },
     });
-    if (!operacion) throw new NotFoundException('Operación no encontrada');
+    if (!operacion || (soloDeUsuario !== undefined && operacion.usuario?.id !== soloDeUsuario)) {
+      throw new NotFoundException('Operación no encontrada');
+    }
     return operacion;
   }
 

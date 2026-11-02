@@ -2,22 +2,15 @@
   {
     "id": 1,
     "activo": true,
-    "fechaCreacion": "2026-10-15T04:15:13.826Z",
+    "fechaCreacion": "2026-11-02T16:51:58.315Z",
     "nombreRol": "administrador",
     "descripcion": "Acceso total al sistema, configuración y reportes"
   },
   {
     "id": 2,
     "activo": true,
-    "fechaCreacion": "2026-10-15T04:15:13.836Z",
+    "fechaCreacion": "2026-11-02T16:51:58.323Z",
     "nombreRol": "cajero",
     "descripcion": "Registra operaciones de compra/venta y movimientos de caja"
-  },
-  {
-    "id": 3,
-    "activo": true,
-    "fechaCreacion": "2026-10-15T04:15:13.843Z",
-    "nombreRol": "supervisor",
-    "descripcion": "Revisa cortes de caja y reportes, sin edición de configuración"
   }
 ]

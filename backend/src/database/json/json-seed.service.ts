@@ -30,7 +30,6 @@ export class JsonSeedService implements OnModuleInit {
       for (const [nombreRol, descripcion] of [
         ['administrador', 'Acceso total al sistema, configuración y reportes'],
         ['cajero', 'Registra operaciones de compra/venta y movimientos de caja'],
-        ['supervisor', 'Revisa cortes de caja y reportes, sin edición de configuración'],
       ]) {
         await roles.save(roles.create({ nombreRol, descripcion }));
       }
@@ -42,7 +41,6 @@ export class JsonSeedService implements OnModuleInit {
       for (const [usuario, nombre, nombreRol] of [
         ['admin', 'Administrador', 'administrador'],
         ['cajero1', 'Cajero', 'cajero'],
-        ['supervisor1', 'Supervisor', 'supervisor'],
       ]) {
         const rol = await roles.findOne({ where: { nombreRol } });
         await usuarios.save(
@@ -57,7 +55,7 @@ export class JsonSeedService implements OnModuleInit {
         );
       }
       this.log.warn(
-        `Usuarios demo creados (admin, cajero1, supervisor1) con la contraseña "${contrasena}". Cámbiala.`,
+        `Usuarios demo creados (admin, cajero1) con la contraseña "${contrasena}". Cámbiala.`,
       );
     }
 

@@ -81,7 +81,7 @@ export class AsistenteIaService {
   /**
    * Datos reales del negocio para que la IA no invente cifras:
    * tipos de cambio vigentes y operaciones de los últimos días, ya agregadas.
-   * Los cajeros solo ven sus propias operaciones; supervisor y administrador, todas.
+   * Los cajeros solo ven sus propias operaciones; el administrador, todas.
    * No se envían nombres de clientes ni de usuarios.
    */
   private async contextoNegocio(idUsuario: number, rol: string) {
@@ -145,10 +145,9 @@ export class AsistenteIaService {
         };
       });
 
-    const corte =
-      rol === 'supervisor'
-        ? null
-        : await this.cortesCajaService.corteActivo(idUsuario).catch((): null => null);
+    const corte = await this.cortesCajaService
+      .corteActivo(idUsuario)
+      .catch((): null => null);
     const dosDec = (v: string) => new Decimal(v).toFixed(2);
     const caja = corte
       ? {

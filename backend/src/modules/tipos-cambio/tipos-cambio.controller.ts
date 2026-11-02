@@ -16,7 +16,7 @@ export class TiposCambioController {
     return this.tiposCambioService.actual();
   }
 
-  @Roles('cajero', 'supervisor', 'administrador')
+  @Roles('cajero', 'administrador')
   @Get('historial/:idMoneda')
   historial(@Param('idMoneda', ParseIntPipe) idMoneda: number) {
     return this.tiposCambioService.historialPorMoneda(idMoneda);

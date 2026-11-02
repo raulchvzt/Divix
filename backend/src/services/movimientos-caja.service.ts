@@ -34,9 +34,12 @@ export class MovimientosCajaService {
     return this.movimientosRepo.save(movimiento);
   }
 
-  async listarPorCorte(idCorte: number) {
+  async listarPorCorte(idCorte: number, soloDeUsuario?: number) {
     return this.movimientosRepo.find({
-      where: { corte: { id: idCorte } },
+      where: {
+        corte: { id: idCorte },
+        ...(soloDeUsuario !== undefined ? { usuario: { id: soloDeUsuario } } : {}),
+      },
       relations: { usuario: true },
       order: { fechaHora: 'ASC' },
     });

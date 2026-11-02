@@ -21,7 +21,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class ClientesController {
   constructor(private readonly clientesService: ClientesService) {}
 
-  @Roles('cajero', 'supervisor', 'administrador')
+  @Roles('cajero', 'administrador')
   @Get()
   listar(
     @Query('busqueda') busqueda?: string,
@@ -31,7 +31,7 @@ export class ClientesController {
     return this.clientesService.listar(busqueda, pagina, limite);
   }
 
-  @Roles('cajero', 'supervisor', 'administrador')
+  @Roles('cajero', 'administrador')
   @Get(':id')
   obtenerPorId(@Param('id', ParseIntPipe) id: number) {
     return this.clientesService.obtenerPorId(id);
@@ -55,7 +55,7 @@ export class ClientesController {
     return this.clientesService.desactivar(id);
   }
 
-  @Roles('cajero', 'supervisor', 'administrador')
+  @Roles('cajero', 'administrador')
   @Get(':id/operaciones')
   historialOperaciones(@Param('id', ParseIntPipe) id: number) {
     return this.clientesService.historialOperaciones(id);

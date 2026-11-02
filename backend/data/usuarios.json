@@ -2,34 +2,25 @@
   {
     "id": 1,
     "activo": true,
-    "fechaRegistro": "2026-10-15T04:15:13.981Z",
+    "fechaRegistro": "2026-11-02T16:51:58.466Z",
     "nombre": "Administrador",
     "apellidoPaterno": "Demo",
     "usuario": "admin",
-    "contrasenaHash": "$2b$10$mXvzwr9usnmXKgTbk3ONmeYZb2xLxbcmPSOGWdKQusrczhT.ovmGq",
-    "fechaActualizacion": "2026-10-15T04:15:13.981Z",
+    "correo": "admin@divix.mx",
+    "contrasenaHash": "$2b$10$AdltaB3NJ8tnoRZziYeYu.MiUt6dvn3c9okFTiz5p40kwjiGqcFdO",
+    "fechaActualizacion": "2026-11-02T16:51:58.466Z",
     "rolId": 1
   },
   {
     "id": 2,
     "activo": true,
-    "fechaRegistro": "2026-10-15T04:15:13.987Z",
+    "fechaRegistro": "2026-11-02T16:51:58.477Z",
     "nombre": "Cajero",
     "apellidoPaterno": "Demo",
     "usuario": "cajero1",
-    "contrasenaHash": "$2b$10$mXvzwr9usnmXKgTbk3ONmeYZb2xLxbcmPSOGWdKQusrczhT.ovmGq",
-    "fechaActualizacion": "2026-10-15T04:15:13.987Z",
+    "correo": "cajero1@divix.mx",
+    "contrasenaHash": "$2b$10$AdltaB3NJ8tnoRZziYeYu.MiUt6dvn3c9okFTiz5p40kwjiGqcFdO",
+    "fechaActualizacion": "2026-11-02T16:51:58.477Z",
     "rolId": 2
-  },
-  {
-    "id": 3,
-    "activo": true,
-    "fechaRegistro": "2026-10-15T04:15:13.994Z",
-    "nombre": "Supervisor",
-    "apellidoPaterno": "Demo",
-    "usuario": "supervisor1",
-    "contrasenaHash": "$2b$10$mXvzwr9usnmXKgTbk3ONmeYZb2xLxbcmPSOGWdKQusrczhT.ovmGq",
-    "fechaActualizacion": "2026-10-15T04:15:13.994Z",
-    "rolId": 3
   }
 ]

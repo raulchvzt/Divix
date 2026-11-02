@@ -11,7 +11,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class AsistenteIaController {
   constructor(private readonly asistenteIaService: AsistenteIaService) {}
 
-  @Roles('cajero', 'supervisor', 'administrador')
+  @Roles('cajero', 'administrador')
   @Post('consultar')
   consultar(
     @Body() dto: ConsultarAsistenteDto,

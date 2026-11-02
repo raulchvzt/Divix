@@ -60,13 +60,13 @@ export class CortesCajaController {
     return this.cortesCajaService.cerrar(id, dto, idUsuario);
   }
 
-  @Roles('supervisor', 'administrador')
+  @Roles('administrador')
   @Get()
   listar(@Query('idUsuario') idUsuario?: number) {
     return this.cortesCajaService.listar({ idUsuario });
   }
 
-  @Roles('supervisor', 'administrador')
+  @Roles('administrador')
   @Get(':id')
   obtenerPorId(@Param('id', ParseIntPipe) id: number) {
     return this.cortesCajaService.obtenerPorId(id);
