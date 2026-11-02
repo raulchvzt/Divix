@@ -8,4 +8,3 @@ export * from './corte-caja.entity';
 export * from './movimiento-caja.entity';
 export * from './consulta-asistente.entity';
 export * from './configuracion-negocio.entity';
-export * from './tipo-cambio-referencia.entity';

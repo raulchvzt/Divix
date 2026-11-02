@@ -24,6 +24,12 @@ export class ConsultaAsistente {
   @JoinColumn({ name: 'id_usuario' })
   usuario: Usuario;
 
+  // Agrupa las preguntas de una misma conversación (UUID generado al iniciarla).
+  // Nulo en las consultas anteriores a que existieran las conversaciones.
+  @Column({ name: 'id_conversacion', type: 'varchar', length: 36, nullable: true })
+  @Index()
+  idConversacion: string | null;
+
   @Column({ type: 'text' })
   pregunta: string;
 

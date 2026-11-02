@@ -14,5 +14,6 @@ import { MovimientosCajaModule } from '../movimientos-caja/movimientos-caja.modu
   ],
   controllers: [CortesCajaController],
   providers: [CortesCajaService],
+  exports: [CortesCajaService],
 })
 export class CortesCajaModule {}

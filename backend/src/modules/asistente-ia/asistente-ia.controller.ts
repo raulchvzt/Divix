@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Param } from '@nestjs/common';
 import { AsistenteIaService } from '../../services/asistente-ia.service';
 import { ConsultarAsistenteDto } from '../../dto/asistente-ia/consultar-asistente.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
@@ -19,6 +19,16 @@ export class AsistenteIaController {
     @CurrentUser('rol') rol: string,
   ) {
     return this.asistenteIaService.consultar(dto, idUsuario, rol);
+  }
+
+  @Get('conversaciones')
+  conversaciones(@CurrentUser('sub') idUsuario: number) {
+    return this.asistenteIaService.conversaciones(idUsuario);
+  }
+
+  @Get('conversaciones/:id')
+  conversacion(@Param('id') id: string, @CurrentUser('sub') idUsuario: number) {
+    return this.asistenteIaService.conversacion(idUsuario, id);
   }
 
   @Get('historial')

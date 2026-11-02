@@ -12,7 +12,6 @@ import { MovimientosCajaModule } from './modules/movimientos-caja/movimientos-ca
 import { CortesCajaModule } from './modules/cortes-caja/cortes-caja.module';
 import { AsistenteIaModule } from './modules/asistente-ia/asistente-ia.module';
 import { NegocioModule } from './modules/negocio/negocio.module';
-import { ReferenciaMercadoModule } from './modules/referencia-mercado/referencia-mercado.module';
 
 @Module({
   imports: [
@@ -33,7 +32,6 @@ import { ReferenciaMercadoModule } from './modules/referencia-mercado/referencia
     CortesCajaModule,
     AsistenteIaModule,
     NegocioModule,
-    ReferenciaMercadoModule,
   ],
 })
 export class AppModule {}
