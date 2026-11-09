@@ -6,6 +6,7 @@ import { Moneda } from '../../entities/moneda.entity';
 import { TipoCambio } from '../../entities/tipo-cambio.entity';
 import { JsonRepository } from './json-repository';
 import { directorioDatos } from './json-tabla';
+import { sembrarOperacionesDemo } from './json-demo';
 
 /**
  * Llena la base JSON con datos mínimos la primera vez que arranca el
@@ -76,5 +77,8 @@ export class JsonSeedService implements OnModuleInit {
         );
       }
     }
+
+    // Operaciones ficticias para ver la app funcionando (solo si no hay ninguna).
+    await sembrarOperacionesDemo(this.log);
   }
 }
