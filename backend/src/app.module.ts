@@ -13,6 +13,7 @@ import { CortesCajaModule } from './modules/cortes-caja/cortes-caja.module';
 import { AsistenteIaModule } from './modules/asistente-ia/asistente-ia.module';
 import { NegocioModule } from './modules/negocio/negocio.module';
 import { ReferenciaMercadoModule } from './modules/referencia-mercado/referencia-mercado.module';
+import { PronosticoDemandaModule } from './modules/pronostico-demanda/pronostico-demanda.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ReferenciaMercadoModule } from './modules/referencia-mercado/referencia
     AsistenteIaModule,
     NegocioModule,
     ReferenciaMercadoModule,
+    PronosticoDemandaModule,
   ],
 })
 export class AppModule {}
