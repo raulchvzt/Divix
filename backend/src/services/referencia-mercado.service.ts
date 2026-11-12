@@ -47,6 +47,49 @@ const pct = (valor: Decimal, base: Decimal) =>
 /** Redondeo de precios: 2 decimales, o 4 para divisas que valen menos de un peso (p. ej. JPY). */
 const redondear = (v: Decimal) => v.toDecimalPlaces(v.lt(1) ? 4 : 2).toFixed(4);
 
+/** Margen mínimo por lado si los precios actuales no tienen margen (venta <= compra). */
+const MARGEN_MINIMO = 0.015;
+
+/**
+ * Precios sugeridos. Nunca sugiere comprar arriba del mercado ni vender abajo.
+ *  1. Si el mercado se movió y los precios del dueño estaban bien, conserva el
+ *     mismo margen frente al mercado que tenía al ponerlos ("mantener_margen").
+ *  2. Si eso dejaría los precios en pérdida (o ya lo están), centra el margen
+ *     habitual del dueño (la distancia entre su compra y su venta) alrededor
+ *     del precio del mercado ("centrar_en_mercado").
+ */
+function sugerirPrecios(
+  compra: Decimal,
+  venta: Decimal,
+  mercado: Decimal,
+  mercadoAlPoner: Decimal | null,
+) {
+  const enPerdida = (c: Decimal, v: Decimal) => c.gt(mercado) || v.lt(mercado);
+
+  if (mercadoAlPoner && !mercadoAlPoner.eq(mercado)) {
+    const c = compra.mul(mercado).div(mercadoAlPoner);
+    const v = venta.mul(mercado).div(mercadoAlPoner);
+    if (!enPerdida(c, v)) {
+      return {
+        compra: redondear(c),
+        venta: redondear(v),
+        motivo: 'mantener_margen' as const,
+      };
+    }
+  }
+  if (!enPerdida(compra, venta)) return null; // sin movimiento y sin pérdida: no hace falta
+
+  // Margen por lado = mitad de la distancia entre compra y venta, en %.
+  let margen = venta.minus(compra).div(venta.plus(compra));
+  if (margen.lt(MARGEN_MINIMO)) margen = new Decimal(MARGEN_MINIMO);
+  return {
+    compra: redondear(mercado.mul(new Decimal(1).minus(margen))),
+    venta: redondear(mercado.mul(new Decimal(1).plus(margen))),
+    motivo: 'centrar_en_mercado' as const,
+    margenPct: margen.mul(100).toDecimalPlaces(2).toNumber(),
+  };
+}
+
 @Injectable()
 export class ReferenciaMercadoService implements OnModuleInit {
   private readonly log = new Logger('ReferenciaMercado');
@@ -279,15 +322,13 @@ export class ReferenciaMercadoService implements OnModuleInit {
             referenciaAlActualizar: seMovio
               ? { valor: alPoner.valor.toFixed(4), fecha: alPoner.fecha }
               : null,
-            // Mismos márgenes frente al mercado que tenía cuando puso sus precios.
-            sugerencia: seMovio
-              ? {
-                  compra: redondear(
-                    compra.mul(actual.valor).div(alPoner.valor),
-                  ),
-                  venta: redondear(venta.mul(actual.valor).div(alPoner.valor)),
-                }
-              : null,
+            // Precios sugeridos (nunca en pérdida); ver sugerirPrecios().
+            sugerencia: sugerirPrecios(
+              compra,
+              venta,
+              actual.valor,
+              alPoner?.valor ?? null,
+            ),
             estado: pierde ? 'perdida' : revisar ? 'revisar' : 'ok',
           };
         }),
