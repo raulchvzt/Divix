@@ -22,6 +22,7 @@ export class MovimientosCajaService {
     moneda: string;
     monto: Decimal;
     concepto: string;
+    billetes?: Record<string, number> | null;
   }) {
     const movimiento = this.movimientosRepo.create({
       corte: { id: datos.idCorte } as any,
@@ -30,6 +31,7 @@ export class MovimientosCajaService {
       moneda: datos.moneda,
       monto: datos.monto.toFixed(4),
       concepto: datos.concepto,
+      billetes: datos.billetes ?? null,
     });
     return this.movimientosRepo.save(movimiento);
   }

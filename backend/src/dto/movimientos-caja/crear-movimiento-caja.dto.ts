@@ -1,4 +1,4 @@
-import { IsEnum, IsNumberString, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsEnum, IsNumberString, IsObject, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import { TipoMovimiento } from '../../entities/movimiento-caja.entity';
 
 export class CrearMovimientoCajaDto {
@@ -18,4 +18,9 @@ export class CrearMovimientoCajaDto {
   @IsString()
   @MaxLength(255)
   concepto?: string;
+
+  /** Solo USD: billetes por denominación { "100": 4, "50": 2 }. Deben sumar el monto. */
+  @IsOptional()
+  @IsObject()
+  billetes?: Record<string, number>;
 }

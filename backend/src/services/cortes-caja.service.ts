@@ -16,6 +16,14 @@ import { CerrarCorteDto } from '../dto/cortes-caja/cerrar-corte.dto';
 import { CrearMovimientoCajaDto } from '../dto/movimientos-caja/crear-movimiento-caja.dto';
 import { OperacionesService } from './operaciones.service';
 import { MovimientosCajaService } from './movimientos-caja.service';
+import {
+  DENOMINACIONES,
+  MONEDA_BILLETES,
+  inventarioBilletes,
+  totalBilletes,
+  validarBilletes,
+  verificarDisponibles,
+} from '../common/billetes';
 
 const MXN = 'MXN';
 const RESERVA = 'reserva';
@@ -107,22 +115,37 @@ export class CortesCajaService {
       }
     }
 
-    return { saldos, reserva, totalCompras, totalVentas, movimientos };
+    // Billetes de USD por denominación (ver common/billetes.ts).
+    const billetes = inventarioBilletes(
+      corte.billetesIniciales,
+      operaciones.map((op) => ({
+        tipoOperacion: op.tipoOperacion,
+        codigo: op.moneda.codigo.toUpperCase(),
+        billetes: op.billetes,
+      })),
+      movimientos,
+    );
+
+    return { saldos, reserva, totalCompras, totalVentas, movimientos, billetes };
   }
 
   /** Corte + saldos esperados + movimientos, listo para la pantalla de Caja. */
   private async detalle(corte: CorteCaja, idUsuario: number) {
-    const { saldos, reserva, movimientos } = await this.calcularEsperados(corte, idUsuario);
+    const { saldos, reserva, movimientos, billetes } = await this.calcularEsperados(corte, idUsuario);
     const { usuario: _u, ...datos } = corte as any;
     return {
       ...datos,
       esperados: { ...this.aTexto(saldos), [RESERVA]: reserva.toFixed(4) },
+      // Billetes de USD que debería haber. Si `completo` es false, alguna operación
+      // o movimiento de USD no trae el detalle y el inventario es aproximado.
+      billetes: { esperados: billetes.billetes, completo: billetes.completo, total: billetes.total },
       movimientos: movimientos.map((m) => ({
         id: m.id,
         tipoMovimiento: m.tipoMovimiento,
         moneda: m.moneda,
         monto: m.monto,
         concepto: m.concepto,
+        billetes: m.billetes ?? null,
         fechaHora: m.fechaHora,
       })),
     };
@@ -164,12 +187,25 @@ export class CortesCajaService {
       throw new ConflictException('Ya existe un corte abierto para este usuario');
     }
 
+    const saldosIniciales = this.mapaMonedas(dto.saldosIniciales, 'saldosIniciales');
+    // Si se mandan los billetes de USD, deben sumar el saldo inicial de USD.
+    let billetesIniciales: Record<string, number> | null = null;
+    if (dto.billetesIniciales) {
+      billetesIniciales = validarBilletes(
+        dto.billetesIniciales,
+        'billetesIniciales',
+        saldosIniciales[MONEDA_BILLETES] ?? totalBilletes(dto.billetesIniciales),
+      );
+      saldosIniciales[MONEDA_BILLETES] = new Decimal(totalBilletes(billetesIniciales));
+    }
+
     const nuevo = this.cortesRepo.create({
       usuario: { id: idUsuario } as any,
       fechaApertura: new Date(),
       efectivoInicial: this.dinero(dto.efectivoInicial, 'efectivoInicial').toFixed(4),
       reservaInicial: this.dinero(dto.reservaInicial, 'reservaInicial').toFixed(4),
-      saldosIniciales: this.aTexto(this.mapaMonedas(dto.saldosIniciales, 'saldosIniciales')),
+      saldosIniciales: this.aTexto(saldosIniciales),
+      billetesIniciales,
     });
 
     const guardado = await this.cortesRepo.save(nuevo);
@@ -190,7 +226,20 @@ export class CortesCajaService {
     const concepto = dto.concepto?.trim() || (reposicion ? 'Caja fuerte → cajero' : '');
     if (!concepto) throw new BadRequestException('Escribe el concepto del movimiento');
 
-    const { saldos, reserva } = await this.calcularEsperados(corte, idUsuario);
+    const { saldos, reserva, billetes: inventario } = await this.calcularEsperados(corte, idUsuario);
+
+    // Entradas y salidas de USD: qué billetes entran o salen.
+    let billetes: Record<string, number> | null = null;
+    if (!reposicion && moneda === MONEDA_BILLETES && dto.billetes) {
+      if (!monto.isInteger()) {
+        throw new BadRequestException('Los dólares se manejan en billetes: usa un monto entero');
+      }
+      billetes = validarBilletes(dto.billetes, 'billetes', monto);
+      if (dto.tipoMovimiento === TipoMovimiento.SALIDA && inventario.completo) {
+        verificarDisponibles(inventario.billetes, billetes);
+      }
+    }
+
     if (reposicion && monto.gt(reserva)) {
       throw new BadRequestException('La reposición no puede superar la reserva de caja fuerte');
     }
@@ -205,6 +254,7 @@ export class CortesCajaService {
       moneda,
       monto,
       concepto,
+      billetes,
     });
   }
 
@@ -240,6 +290,17 @@ export class CortesCajaService {
       dto.reservaFinal === undefined ? esperado.reserva : this.dinero(dto.reservaFinal, 'reservaFinal');
     const contadas = this.mapaMonedas(dto.saldosFinales, 'saldosFinales');
 
+    // Billetes de USD contados: deben sumar el USD contado (si se mandó).
+    let billetesFinales: Record<string, number> | null = null;
+    if (dto.billetesFinales) {
+      billetesFinales = validarBilletes(
+        dto.billetesFinales,
+        'billetesFinales',
+        contadas[MONEDA_BILLETES] ?? totalBilletes(dto.billetesFinales),
+      );
+      contadas[MONEDA_BILLETES] = new Decimal(totalBilletes(billetesFinales));
+    }
+
     // Monedas con saldo esperado que no se contaron: se asume que coinciden.
     const codigos = new Set([...Object.keys(esperado.saldos), ...Object.keys(contadas)]);
     codigos.delete(MXN);
@@ -260,6 +321,19 @@ export class CortesCajaService {
     corte.totalVentas = esperado.totalVentas.toFixed(4);
     corte.diferencias = this.aTexto(diferencias);
     corte.diferenciaCaja = diferencias[MXN].toFixed(4);
+
+    // Diferencia por billete (contado - esperado). Solo si el inventario está
+    // completo; si no, no se sabe con certeza cuántos de cada uno debía haber.
+    corte.billetesFinales = billetesFinales;
+    corte.diferenciasBilletes =
+      billetesFinales && esperado.billetes.completo
+        ? Object.fromEntries(
+            DENOMINACIONES.map((d) => [
+              String(d),
+              (billetesFinales[String(d)] ?? 0) - (esperado.billetes.billetes[String(d)] ?? 0),
+            ]),
+          )
+        : null;
 
     const { usuario: _u, ...guardado } = (await this.cortesRepo.save(corte)) as any;
     return guardado;

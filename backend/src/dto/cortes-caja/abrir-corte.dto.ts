@@ -14,4 +14,9 @@ export class AbrirCorteDto {
   @IsOptional()
   @IsObject()
   saldosIniciales?: Record<string, string>;
+
+  /** Solo USD: billetes por denominación { "100": 4, "50": 2 }. Deben sumar el saldo inicial de USD. */
+  @IsOptional()
+  @IsObject()
+  billetesIniciales?: Record<string, number>;
 }

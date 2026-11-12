@@ -1,4 +1,4 @@
-import { IsInt, IsEnum, IsNumberString } from 'class-validator';
+import { IsInt, IsEnum, IsNumberString, IsObject, IsOptional } from 'class-validator';
 import { TipoOperacion } from '../../entities/operacion.entity';
 
 // Nota de seguridad: este DTO NO incluye tipoCambioAplicado ni
@@ -16,4 +16,9 @@ export class CrearOperacionDto {
 
   @IsNumberString()
   cantidadDivisa: string;
+
+  /** Solo USD: billetes por denominación { "100": 4, "50": 2 }. Deben sumar la cantidad. */
+  @IsOptional()
+  @IsObject()
+  billetes?: Record<string, number>;
 }
