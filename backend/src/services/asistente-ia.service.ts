@@ -43,7 +43,61 @@ Reglas:
 @Injectable()
 export class AsistenteIaService {
   private readonly log = new Logger('AsistenteIA');
-  private readonly client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  private anthropic?: Anthropic;
+
+  /**
+   * Proveedor de IA: `IA_PROVEEDOR=deepseek|anthropic`. Si no se indica, se usa DeepSeek
+   * cuando hay DEEPSEEK_API_KEY y Anthropic en caso contrario.
+   */
+  private get proveedor(): 'deepseek' | 'anthropic' {
+    const elegido = process.env.IA_PROVEEDOR?.toLowerCase();
+    if (elegido === 'deepseek' || elegido === 'anthropic') return elegido;
+    return process.env.DEEPSEEK_API_KEY ? 'deepseek' : 'anthropic';
+  }
+
+  /** DeepSeek usa un formato compatible con OpenAI (POST /chat/completions). */
+  private async llamarDeepSeek(
+    system: string,
+    mensajes: { role: 'user' | 'assistant'; content: string }[],
+  ): Promise<string> {
+    const base = (process.env.DEEPSEEK_URL ?? 'https://api.deepseek.com').replace(/\/+$/, '');
+    const respuesta = await fetch(`${base}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.DEEPSEEK_MODEL ?? 'deepseek-chat',
+        max_tokens: 600,
+        temperature: 0.2, // respuestas más estables: son cifras de un negocio
+        messages: [{ role: 'system', content: system }, ...mensajes],
+      }),
+      signal: AbortSignal.timeout(45_000),
+    });
+    const datos: any = await respuesta.json().catch((): null => null);
+    if (!respuesta.ok) {
+      throw Object.assign(new Error(datos?.error?.message ?? `HTTP ${respuesta.status}`), {
+        status: respuesta.status,
+      });
+    }
+    return datos?.choices?.[0]?.message?.content ?? '';
+  }
+
+  private async llamarAnthropic(
+    system: string,
+    mensajes: { role: 'user' | 'assistant'; content: string }[],
+  ): Promise<string> {
+    this.anthropic ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const mensaje = await this.anthropic.messages.create({
+      model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+      max_tokens: 600,
+      system,
+      messages: mensajes,
+    });
+    const bloque = mensaje.content.find((b) => b.type === 'text');
+    return bloque?.type === 'text' ? bloque.text : '';
+  }
   /** Usuarios con una consulta en curso: evita lanzar varias en paralelo. */
   private readonly enCurso = new Set<number>();
 
@@ -175,9 +229,10 @@ export class AsistenteIaService {
   }
 
   async consultar(dto: ConsultarAsistenteDto, idUsuario: number, rol: string) {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    const variableClave = this.proveedor === 'deepseek' ? 'DEEPSEEK_API_KEY' : 'ANTHROPIC_API_KEY';
+    if (!process.env[variableClave]) {
       throw new ServiceUnavailableException(
-        'El asistente no está configurado (falta ANTHROPIC_API_KEY en el servidor).',
+        'El asistente no está configurado (falta DEEPSEEK_API_KEY o ANTHROPIC_API_KEY en el servidor).',
       );
     }
     await this.validarLimites(idUsuario);
@@ -208,17 +263,35 @@ export class AsistenteIaService {
 
       let respuestaTexto = '';
       try {
-        const mensaje = await this.client.messages.create({
-          model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
-          max_tokens: 600,
-          system: `${INSTRUCCIONES}\n\n<datos_negocio>\n${JSON.stringify(contexto)}\n</datos_negocio>`,
-          messages: [...historial, { role: 'user', content: dto.pregunta.trim() }],
-        });
-        const bloque = mensaje.content.find((b) => b.type === 'text');
-        respuestaTexto = bloque?.type === 'text' ? bloque.text : '';
+        const system = `${INSTRUCCIONES}\n\n<datos_negocio>\n${JSON.stringify(contexto)}\n</datos_negocio>`;
+        const mensajes = [...historial, { role: 'user' as const, content: dto.pregunta.trim() }];
+        respuestaTexto =
+          this.proveedor === 'deepseek'
+            ? await this.llamarDeepSeek(system, mensajes)
+            : await this.llamarAnthropic(system, mensajes);
       } catch (error) {
-        this.log.error(`Falló la llamada a la API de Anthropic: ${(error as Error).message}`);
-        throw new ServiceUnavailableException('El asistente no pudo procesar la consulta. Intenta de nuevo.');
+        const estado = (error as { status?: number }).status;
+        const nombre = this.proveedor === 'deepseek' ? 'DeepSeek' : 'Anthropic';
+        const variable = this.proveedor === 'deepseek' ? 'DEEPSEEK' : 'ANTHROPIC';
+        this.log.error(`Falló la llamada a la API de ${nombre} (${estado ?? 'sin respuesta'}): ${(error as Error).message}`);
+        // El detalle de configuración solo se muestra al administrador.
+        const causa =
+          estado === 401
+            ? `La clave ${variable}_API_KEY no es válida. Revísala en el .env.`
+            : estado === 402 || (estado === 400 && /credit/i.test((error as Error).message))
+              ? `La cuenta de ${nombre} no tiene saldo. Agrega fondos en su plataforma.`
+              : estado === 404 || (estado === 400 && /model/i.test((error as Error).message))
+                ? `El modelo configurado en ${variable}_MODEL no existe.`
+                : estado === 429
+                  ? `${nombre} está limitando las peticiones. Espera un momento.`
+                  : estado === undefined
+                    ? `No se pudo conectar con ${nombre}. Revisa tu conexión a internet.`
+                    : null;
+        throw new ServiceUnavailableException(
+          rol === 'administrador' && causa
+            ? causa
+            : 'El asistente no pudo procesar la consulta. Intenta de nuevo.',
+        );
       }
 
       const tiempoRespuestaMs = Date.now() - inicio;
