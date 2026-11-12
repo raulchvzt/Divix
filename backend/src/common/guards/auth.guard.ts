@@ -21,6 +21,8 @@ export class AuthGuard implements CanActivate {
     try {
       // payload = { sub, usuario, rol } (ver AuthService.login)
       const payload = this.jwtService.verify(token);
+      // El token de renovación solo sirve en POST /auth/refresh, no para usar la API.
+      if (payload.tipo === 'refresco') throw new Error('token de renovación');
       request.user = payload;
     } catch {
       throw new UnauthorizedException('Token inválido o expirado');

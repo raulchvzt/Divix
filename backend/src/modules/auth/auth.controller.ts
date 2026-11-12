@@ -1,8 +1,8 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from '../../services/auth.service';
 import { LoginDto } from '../../dto/auth/login.dto';
+import { RefreshDto } from '../../dto/auth/refresh.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -13,10 +13,10 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @UseGuards(AuthGuard)
+  // Sin AuthGuard: justo se usa cuando el access token ya venció.
   @Post('refresh')
-  refresh(@CurrentUser('sub') idUsuario: number) {
-    return this.authService.refresh(idUsuario);
+  refresh(@Body() dto: RefreshDto) {
+    return this.authService.refresh(dto.refreshToken);
   }
 
   @UseGuards(AuthGuard)
