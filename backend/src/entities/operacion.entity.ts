@@ -55,6 +55,10 @@ export class Operacion {
   @Column({ name: 'importe_total', type: 'decimal', precision: 15, scale: 4 })
   importeTotal: string;
 
+  // Solo USD: billetes por denominación que entraron o salieron { "100": 4, "50": 2 }.
+  @Column({ type: 'json', nullable: true })
+  billetes: Record<string, number> | null;
+
   @CreateDateColumn({ name: 'fecha_hora' })
   fechaHora: Date;
 }

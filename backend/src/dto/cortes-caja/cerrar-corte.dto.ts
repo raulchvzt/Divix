@@ -16,4 +16,9 @@ export class CerrarCorteDto {
   @IsOptional()
   @IsObject()
   saldosFinales?: Record<string, string>;
+
+  /** Solo USD: billetes por denominación { "100": 4, "50": 2 }. Deben sumar el USD contado. */
+  @IsOptional()
+  @IsObject()
+  billetesFinales?: Record<string, number>;
 }

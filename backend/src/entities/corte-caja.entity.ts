@@ -62,6 +62,17 @@ export class CorteCaja {
   @Column({ type: 'json', nullable: true })
   diferencias: Record<string, string> | null;
 
+  // Billetes de USD por denominación { "100": 5, "50": 2, ... }: los contados al
+  // abrir, los contados al cerrar y la diferencia (contado - esperado) al cerrar.
+  @Column({ name: 'billetes_iniciales', type: 'json', nullable: true })
+  billetesIniciales: Record<string, number> | null;
+
+  @Column({ name: 'billetes_finales', type: 'json', nullable: true })
+  billetesFinales: Record<string, number> | null;
+
+  @Column({ name: 'diferencias_billetes', type: 'json', nullable: true })
+  diferenciasBilletes: Record<string, number> | null;
+
   @OneToMany(() => MovimientoCaja, (mov) => mov.corte)
   movimientos: MovimientoCaja[];
 }
