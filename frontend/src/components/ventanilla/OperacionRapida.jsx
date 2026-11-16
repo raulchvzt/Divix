@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Calculator, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Calculator, Plus, Lock, ArrowRight } from 'lucide-react'
 import { obtenerDivisas } from '../../api/divisas'
 import { registrarOperacion, obtenerClienteGeneral } from '../../api/operaciones'
 import { useCarga } from '../../api/useCarga'
@@ -14,8 +15,11 @@ import { billetesVacios, billetesValidos } from '../../utils/billetes'
 const campo =
   'w-full bg-white border border-line rounded-xl px-4 py-3.5 text-sm font-medium outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition'
 
-/** billetesCaja: inventario de billetes de USD de la caja abierta ({ esperados, completo }) o null. */
-export default function OperacionRapida({ onRegistrada, billetesCaja }) {
+/**
+ * caja: caja abierta del usuario (GET /cortes-caja/activo) o null si no tiene.
+ * billetesCaja: inventario de billetes de USD de la caja abierta ({ esperados, completo }) o null.
+ */
+export default function OperacionRapida({ onRegistrada, caja, cajaCargando, billetesCaja }) {
   const [tipo, setTipo] = useState('venta') // 'compra' | 'venta'
   const [codigo, setCodigo] = useState('')
   const [monto, setMonto] = useState('')
@@ -35,11 +39,30 @@ export default function OperacionRapida({ onRegistrada, billetesCaja }) {
   const modoBilletes = tipo === 'venta' ? 'entregar' : 'recibir'
   const disponibles = billetesCaja?.completo ? billetesCaja.esperados : null
 
+  // Solo se opera con la caja abierta, y la caja no puede quedar en negativo:
+  // para vender hace falta la divisa; para comprar, los pesos con que se paga.
+  const sinCaja = !cajaCargando && !caja
+  const saldoDivisa = Number(caja?.esperados?.[divisa?.codigo] ?? 0)
+  const saldoPesos = Number(caja?.esperados?.MXN ?? 0)
+  const formato = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const faltaSaldo =
+    caja && parseFloat(monto) > 0
+      ? tipo === 'venta'
+        ? parseFloat(monto) > saldoDivisa
+          ? `No hay suficiente ${divisa?.codigo} en tu caja: tienes ${formato(saldoDivisa)}.`
+          : ''
+        : total > saldoPesos
+          ? `No hay suficientes pesos en tu caja para pagar ${dinero(total)} (tienes ${dinero(saldoPesos)}). Pide una reposición en Caja.`
+          : ''
+      : ''
+
   const registrar = async () => {
     setError('')
     setAviso('')
     if (!divisa) return setError('No hay divisas disponibles.')
+    if (sinCaja) return setError('Abre tu caja antes de registrar operaciones.')
     if (!(parseFloat(monto) > 0)) return setError('Escribe un monto mayor a cero.')
+    if (faltaSaldo) return setError(faltaSaldo)
     if (esUsd && !billetesValidos(monto, modoBilletes, disponibles, billetes)) {
       return setError('Revisa los billetes: deben sumar el monto y no puedes entregar más de los que hay en caja.')
     }
@@ -108,6 +131,23 @@ export default function OperacionRapida({ onRegistrada, billetesCaja }) {
         ))}
       </div>
 
+      {/* Sin caja abierta no se puede operar */}
+      {sinCaja && (
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <Lock size={18} className="text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-900">
+            <span className="font-semibold">Tu caja está cerrada.</span> Ábrela para empezar a registrar operaciones.
+          </p>
+          <Link
+            to="/caja"
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+          >
+            Abrir caja
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
+
       {/* Campos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5">
         <div>
@@ -139,6 +179,14 @@ export default function OperacionRapida({ onRegistrada, billetesCaja }) {
               className={`${campo} text-right text-base font-semibold`}
             />
           </div>
+          {caja && divisa && (
+            <p className={`text-xs mt-2 ${faltaSaldo ? 'text-red-600 font-medium' : 'text-slate-500'}`}>
+              {faltaSaldo ||
+                (tipo === 'venta'
+                  ? `En tu caja: ${formato(saldoDivisa)} ${divisa.codigo}`
+                  : `Pesos en tu caja: ${dinero(saldoPesos)}`)}
+            </p>
+          )}
         </div>
 
 
@@ -176,8 +224,8 @@ export default function OperacionRapida({ onRegistrada, billetesCaja }) {
         </div>
         <button
           onClick={registrar}
-          disabled={enviando}
-          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-6 py-3.5 rounded-xl shadow-lg shadow-brand-600/30 transition-colors"
+          disabled={enviando || sinCaja || !!faltaSaldo}
+          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-600 text-white text-sm font-semibold px-6 py-3.5 rounded-xl shadow-lg shadow-brand-600/30 transition-colors"
         >
           <Plus size={20} />
           {enviando ? 'Registrando…' : 'Registrar operación'}
