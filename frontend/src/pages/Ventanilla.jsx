@@ -14,7 +14,7 @@ export default function Ventanilla() {
   const navigate = useNavigate()
   const [version, setVersion] = useState(0)
   const { datos: resumen } = useCarga(resumenDia, [version])
-  const { datos: corte } = useCarga(corteActivo, [version])
+  const { datos: corte, cargando: cargandoCorte } = useCarga(corteActivo, [version])
   const recargar = () => setVersion((v) => v + 1)
 
   return (
@@ -58,7 +58,12 @@ export default function Ventanilla() {
 
       {/* Operación rápida (a la derecha irá el panel de Divix AI) */}
            {/* Operación rápida + panel de IA */}
-      <OperacionRapida onRegistrada={recargar} billetesCaja={corte?.billetes ?? null} />
+      <OperacionRapida
+        onRegistrada={recargar}
+        caja={corte ?? null}
+        cajaCargando={cargandoCorte}
+        billetesCaja={corte?.billetes ?? null}
+      />
 
       {/* Últimas transacciones */}
       <div className="mt-6">
