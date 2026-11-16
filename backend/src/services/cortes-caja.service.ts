@@ -10,12 +10,12 @@ import { IsNull, Repository } from 'typeorm';
 import Decimal from 'decimal.js';
 import { CorteCaja } from '../entities/corte-caja.entity';
 import { TipoMovimiento } from '../entities/movimiento-caja.entity';
-import { TipoOperacion } from '../entities/operacion.entity';
 import { AbrirCorteDto } from '../dto/cortes-caja/abrir-corte.dto';
 import { CerrarCorteDto } from '../dto/cortes-caja/cerrar-corte.dto';
 import { CrearMovimientoCajaDto } from '../dto/movimientos-caja/crear-movimiento-caja.dto';
 import { OperacionesService } from './operaciones.service';
 import { MovimientosCajaService } from './movimientos-caja.service';
+import { saldosEsperados } from '../common/saldos-caja';
 import {
   DENOMINACIONES,
   MONEDA_BILLETES,
@@ -76,44 +76,14 @@ export class CortesCajaService {
    *   reposición: pasa pesos de la caja fuerte a la del cajero
    */
   async calcularEsperados(corte: CorteCaja, idUsuario: number) {
-    const saldos: Record<string, Decimal> = { [MXN]: new Decimal(corte.efectivoInicial) };
-    for (const [c, v] of Object.entries(corte.saldosIniciales ?? {})) {
-      saldos[c.toUpperCase()] = new Decimal(v);
-    }
-    let reserva = new Decimal(corte.reservaInicial ?? 0);
-    let totalCompras = new Decimal(0);
-    let totalVentas = new Decimal(0);
-    const suma = (c: string, v: Decimal) => {
-      saldos[c] = (saldos[c] ?? new Decimal(0)).plus(v);
-    };
-
     const operaciones = await this.operacionesService.desde(idUsuario, corte.fechaApertura);
-    for (const op of operaciones) {
-      const importe = new Decimal(op.importeTotal);
-      const cantidad = new Decimal(op.cantidadDivisa);
-      const codigo = op.moneda.codigo.toUpperCase();
-      if (op.tipoOperacion === TipoOperacion.COMPRA) {
-        totalCompras = totalCompras.plus(importe);
-        suma(MXN, importe.neg());
-        suma(codigo, cantidad);
-      } else {
-        totalVentas = totalVentas.plus(importe);
-        suma(MXN, importe);
-        suma(codigo, cantidad.neg());
-      }
-    }
-
     const movimientos = await this.movimientosCajaService.listarPorCorte(corte.id);
-    for (const m of movimientos) {
-      const monto = new Decimal(m.monto);
-      const codigo = (m.moneda ?? MXN).toUpperCase();
-      if (m.tipoMovimiento === TipoMovimiento.ENTRADA) suma(codigo, monto);
-      else if (m.tipoMovimiento === TipoMovimiento.SALIDA) suma(codigo, monto.neg());
-      else {
-        reserva = reserva.minus(monto);
-        suma(MXN, monto);
-      }
-    }
+    // Mismo cálculo que usa OperacionesService para validar (ver common/saldos-caja.ts).
+    const { saldos, reserva, totalCompras, totalVentas } = saldosEsperados(
+      corte,
+      operaciones,
+      movimientos,
+    );
 
     // Billetes de USD por denominación (ver common/billetes.ts).
     const billetes = inventarioBilletes(
