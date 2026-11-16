@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { puedeVer } from '../../api/permisos'
+import { dinero } from '../../utils/formato'
 import {
   DollarSign,
   LayoutGrid,
@@ -7,7 +8,8 @@ import {
   Inbox,
   FileText,
   SlidersHorizontal,
-  ShieldCheck,
+  Lock,
+  Unlock,
   PieChart,
   X,
   Sparkles,
@@ -57,7 +59,62 @@ function NavSection({ title, items, onNavegar }) {
   )
 }
 
-export default function Sidebar({ abierto = false, onCerrar = () => {}, iaAbierta = false, onIA = () => {} }) {
+/** Estado real de la caja del usuario, abajo del menú. */
+function TarjetaCaja({ corte, cargando, onNavegar }) {
+  if (cargando && !corte) return <div className="mt-auto h-[108px] rounded-2xl bg-ink-800/90" />
+
+  const desde = corte
+    ? new Date(corte.fechaApertura).toLocaleString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        ...(new Date(corte.fechaApertura).toDateString() === new Date().toDateString()
+          ? {}
+          : { day: 'numeric', month: 'short' }),
+      })
+    : null
+  const pesos = corte?.esperados?.MXN
+
+  return (
+    <Link
+      to="/caja"
+      onClick={onNavegar}
+      className="mt-auto block rounded-2xl bg-ink-800 text-white p-4 hover:bg-ink-900 transition-colors"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        {corte ? (
+          <Unlock size={18} className="text-brand-500" />
+        ) : (
+          <Lock size={18} className="text-slate-400" />
+        )}
+        <p className="text-sm font-semibold">{corte ? 'Caja abierta' : 'Caja cerrada'}</p>
+      </div>
+      {corte ? (
+        <>
+          <p className="text-xs text-slate-400">Desde las {desde}</p>
+          {pesos != null && (
+            <p className="mt-2 text-xs text-slate-400">
+              Pesos en caja <span className="block text-base font-bold text-white">{dinero(Number(pesos))}</span>
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Ábrela para registrar operaciones. <span className="text-brand-500 font-semibold">Ir a caja →</span>
+        </p>
+      )}
+    </Link>
+  )
+}
+
+export default function Sidebar({
+  abierto = false,
+  onCerrar = () => {},
+  iaAbierta = false,
+  onIA = () => {},
+  corte = null,
+  cargandoCaja = false,
+}) {
   return (
     <>
     {/* Fondo oscuro detrás del menú (solo móvil/tablet) */}
@@ -108,19 +165,8 @@ export default function Sidebar({ abierto = false, onCerrar = () => {}, iaAbiert
         </button>
       </div>
 
-      {/* Tarjeta inferior */}
-      <div className="mt-auto rounded-2xl bg-ink-800 text-white p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldCheck size={18} className="text-brand-500" />
-          <p className="text-sm font-semibold">Caja protegida</p>
-        </div>
-        <p className="text-xs text-slate-400 leading-relaxed mb-3">
-          Tus movimientos están sincronizados y respaldados.
-        </p>
-        <div className="h-1 rounded-full bg-white/10">
-          <div className="h-1 rounded-full bg-brand-500 w-[70%]" />
-        </div>
-      </div>
+      {/* Estado de la caja */}
+      {puedeVer('/caja') && <TarjetaCaja corte={corte} cargando={cargandoCaja} onNavegar={onCerrar} />}
     </aside>
     </>
   )
