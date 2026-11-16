@@ -15,6 +15,7 @@ Aplicación web de Divix hecha con **React 19**, **Vite** y **Tailwind CSS 4**. 
 | `/operaciones` | Historial con búsqueda y filtros | Admin y cajero |
 | `/estadisticas` | Indicadores, gráficas y pronóstico de demanda | Admin y cajero |
 | `/configuracion` | Usuarios, divisas y datos del negocio | Admin |
+| `/perfil` | **Mi perfil**: foto, datos personales y contraseña (se abre desde tu nombre arriba a la derecha) | Admin y cajero (el cajero no edita nombre ni correo) |
 
 En todas las pantallas hay un menú lateral con el estado real de la caja, una campana con avisos (caja cerrada, precios en pérdida, mercado movido) y el asistente **Divix AI**.
 

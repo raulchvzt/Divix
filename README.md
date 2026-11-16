@@ -19,6 +19,7 @@ divix/
 | **Caja y cortes** | Apertura con conteo, entradas y salidas, reposición desde la caja fuerte y cierre con faltantes o sobrantes. Control de billetes de USD por denominación. |
 | **Operaciones** | Historial con búsqueda y filtros. |
 | **Estadísticas** | Indicadores y gráficas por periodo, más un **pronóstico de demanda** por divisa (modelo estadístico de temporadas y tendencia, con su error medido). |
+| **Mi perfil** | Cada usuario cambia su foto y su contraseña; el administrador también su nombre y correo. |
 | **Configuración** | Usuarios, divisas (con sugerencias del catálogo mundial ISO 4217) y datos del negocio. |
 
 ## Cómo correrlo
@@ -61,7 +62,7 @@ npm run dev
 ## Base de datos
 
 - **JSON (desarrollo):** `DB_DRIVER=json`. Guarda todo en `backend/data/` sin instalar nada. Al arrancar crea los usuarios de prueba y, si no hay operaciones, genera 2 años de operaciones ficticias para la demo (`SEED_DEMO=false` para no generarlas).
-- **MySQL:** `DB_DRIVER=mysql` y las variables `DB_*`. Los cambios de estructura están en `backend/sql/` y hay que ejecutarlos a mano.
+- **MySQL:** `DB_DRIVER=mysql` y las variables `DB_*`. Los cambios de estructura están en `backend/sql/` y hay que ejecutarlos a mano, en orden de fecha.
 
 ## Cómo trabajamos
 
