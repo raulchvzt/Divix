@@ -8,6 +8,7 @@ import Caja from './pages/Caja'
 import Operaciones from './pages/Operaciones.jsx'
 import Configuracion from './pages/Configuracion.jsx'
 import RutaProtegida from './components/RutaProtegida.jsx'
+import Perfil from './pages/Perfil.jsx'
 
 // Se carga aparte para que la librería de gráficas no pese en el resto de la app.
 const Estadisticas = lazy(() => import('./pages/Estadisticas.jsx'))
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/operaciones" element={<RutaProtegida ruta="/operaciones"><Operaciones /></RutaProtegida>} />
           <Route path="/estadisticas" element={<RutaProtegida ruta="/estadisticas"><Suspense fallback={<p className="text-sm text-slate-400">Cargando…</p>}><Estadisticas /></Suspense></RutaProtegida>} />
           <Route path="/configuracion" element={<RutaProtegida ruta="/configuracion"><Configuracion /></RutaProtegida>} />
+          <Route path="/perfil" element={<RutaProtegida ruta="/perfil"><Perfil /></RutaProtegida>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

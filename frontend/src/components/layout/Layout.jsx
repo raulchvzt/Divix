@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
@@ -6,12 +6,18 @@ import DivixAI from '../ventanilla/DivixAI'
 import { useEstadoCaja } from '../../hooks/useEstadoCaja'
 import { calcularAvisos } from '../../utils/avisos'
 import { rolActual } from '../../api/permisos'
+import { obtenerPerfil, alCambiarPerfil } from '../../api/perfil'
+import { useCarga } from '../../api/useCarga'
 
 export default function Layout() {
   const { pathname } = useLocation()
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [iaAbierta, setIaAbierta] = useState(false)
   const { corte, cargando, mercado } = useEstadoCaja()
+  // Perfil (para la foto del encabezado); se recarga cuando se edita en "Mi perfil".
+  const [versionPerfil, setVersionPerfil] = useState(0)
+  useEffect(() => alCambiarPerfil(() => setVersionPerfil((v) => v + 1)), [])
+  const { datos: perfil } = useCarga(obtenerPerfil, [versionPerfil])
   const avisos = calcularAvisos({ corte, cargando, mercado, esAdmin: rolActual() === 'administrador' })
 
   return (
@@ -25,7 +31,7 @@ export default function Layout() {
         cargandoCaja={cargando}
       />
       <div className="flex-1 min-w-0">
-        <Topbar onMenu={() => setMenuAbierto(true)} corte={corte} avisos={avisos} />
+        <Topbar onMenu={() => setMenuAbierto(true)} corte={corte} avisos={avisos} perfil={perfil} />
         {/* La key hace que la animación de entrada se repita al cambiar de página. */}
         <main key={pathname} className="pagina px-4 py-5 sm:px-6 lg:px-8 lg:py-8 max-w-[1500px]">
           <Outlet />
