@@ -45,7 +45,12 @@ export class ClientesService {
 
   async actualizar(id: number, dto: ActualizarClienteDto) {
     const cliente = await this.obtenerPorId(id);
-    Object.assign(cliente, dto);
+    // Solo los campos editables: nunca el id ni "activo" (desactivar es solo del administrador).
+    const { nombre, apellidoPaterno, apellidoMaterno, telefono, correo } = dto;
+    const cambios = { nombre, apellidoPaterno, apellidoMaterno, telefono, correo };
+    for (const [campo, valor] of Object.entries(cambios)) {
+      if (valor !== undefined) (cliente as any)[campo] = valor;
+    }
     return this.clientesRepo.save(cliente);
   }
 

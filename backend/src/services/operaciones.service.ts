@@ -8,6 +8,7 @@ import { TiposCambioService } from './tipos-cambio.service';
 import { MovimientosCajaService } from './movimientos-caja.service';
 import { CorteCaja } from '../entities/corte-caja.entity';
 import { MONEDA_BILLETES, inventarioBilletes, validarBilletes, verificarDisponibles } from '../common/billetes';
+import { MXN, saldosEsperados } from '../common/saldos-caja';
 
 @Injectable()
 export class OperacionesService {
@@ -21,10 +22,11 @@ export class OperacionesService {
   ) {}
 
   /**
-   * Billetes de USD que debería tener el usuario en su caja abierta, o null si
-   * no tiene caja abierta o el inventario no está completo (no se puede validar).
+   * Caja abierta del usuario con lo que DEBERÍA tener en este momento: saldos
+   * por moneda (mismo cálculo que la pantalla de Caja) y billetes de USD (null
+   * si el inventario de billetes no está completo y no se puede validar).
    */
-  private async billetesDisponibles(idUsuario: number) {
+  private async cajaAbierta(idUsuario: number) {
     const corte = await this.cortesRepo.findOne({
       where: { usuario: { id: idUsuario }, fechaCierre: IsNull() },
     });
@@ -33,6 +35,7 @@ export class OperacionesService {
       this.desde(idUsuario, corte.fechaApertura),
       this.movimientosCajaService.listarPorCorte(corte.id),
     ]);
+    const { saldos } = saldosEsperados(corte, operaciones, movimientos);
     const inv = inventarioBilletes(
       corte.billetesIniciales,
       operaciones.map((op) => ({
@@ -42,7 +45,7 @@ export class OperacionesService {
       })),
       movimientos,
     );
-    return inv.completo ? inv.billetes : null;
+    return { saldos, billetes: inv.completo ? inv.billetes : null };
   }
 
   async listar(filtros: {
@@ -94,18 +97,42 @@ export class OperacionesService {
       throw new BadRequestException('La cantidad debe ser mayor a cero');
     }
     const importeTotal = cantidad.mul(tasa);
+    const codigo = tipoCambioVigente.moneda?.codigo?.toUpperCase() ?? '';
+
+    // Toda operación debe quedar dentro de una caja abierta, para que el corte cuadre.
+    const caja = await this.cajaAbierta(idUsuario);
+    if (!caja) {
+      throw new BadRequestException('Abre tu caja antes de registrar operaciones');
+    }
+    // La caja no puede quedar en negativo: para vender hace falta la divisa,
+    // y para comprar hacen falta los pesos con que se paga.
+    const fmt = (v: Decimal) => v.toNumber().toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (dto.tipoOperacion === TipoOperacion.VENTA) {
+      const hay = caja.saldos[codigo] ?? new Decimal(0);
+      if (cantidad.gt(hay)) {
+        throw new BadRequestException(
+          `No hay suficiente ${codigo} en tu caja: quieres vender ${fmt(cantidad)} y tienes ${fmt(hay)}`,
+        );
+      }
+    } else {
+      const hay = caja.saldos[MXN] ?? new Decimal(0);
+      if (importeTotal.gt(hay)) {
+        throw new BadRequestException(
+          `No hay suficientes pesos en tu caja para pagar $${fmt(importeTotal)} MXN (tienes $${fmt(hay)}). Pide una reposición.`,
+        );
+      }
+    }
 
     // Dólares: qué billetes entraron (compra) o salieron (venta) de la caja.
     let billetes: Record<string, number> | null = null;
-    const esUsd = tipoCambioVigente.moneda?.codigo?.toUpperCase() === MONEDA_BILLETES;
+    const esUsd = codigo === MONEDA_BILLETES;
     if (esUsd && dto.billetes) {
       if (!cantidad.isInteger()) {
         throw new BadRequestException('Los dólares se operan en billetes: usa una cantidad entera');
       }
       billetes = validarBilletes(dto.billetes, 'billetes', cantidad);
-      if (dto.tipoOperacion === TipoOperacion.VENTA) {
-        const disponibles = await this.billetesDisponibles(idUsuario);
-        if (disponibles) verificarDisponibles(disponibles, billetes);
+      if (dto.tipoOperacion === TipoOperacion.VENTA && caja.billetes) {
+        verificarDisponibles(caja.billetes, billetes);
       }
     }
 
