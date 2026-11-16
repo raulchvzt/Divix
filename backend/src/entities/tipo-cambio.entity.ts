@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   OneToMany,
   Index,
+  type Relation,
 } from 'typeorm';
 import { Moneda } from './moneda.entity';
 import { Usuario } from './usuario.entity';
@@ -21,7 +22,7 @@ export class TipoCambio {
 
   @ManyToOne(() => Moneda, (moneda) => moneda.tiposCambio)
   @JoinColumn({ name: 'id_moneda' })
-  moneda: Moneda;
+  moneda: Relation<Moneda>;
 
   @Column({ name: 'tipo_cambio_compra', type: 'decimal', precision: 15, scale: 4 })
   tipoCambioCompra: string; // decimal en TypeORM llega como string; convertir al usarlo
@@ -34,7 +35,7 @@ export class TipoCambio {
 
   @ManyToOne(() => Usuario, (usuario) => usuario.tiposCambioRegistrados)
   @JoinColumn({ name: 'id_usuario' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   @OneToMany(() => Operacion, (op) => op.tipoCambio)
   operaciones: Operacion[];

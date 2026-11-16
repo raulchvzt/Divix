@@ -7,6 +7,7 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  type Relation,
 } from 'typeorm';
 import { Rol } from './rol.entity';
 import { TipoCambio } from './tipo-cambio.entity';
@@ -41,7 +42,7 @@ export class Usuario {
 
   @ManyToOne(() => Rol, (rol) => rol.usuarios)
   @JoinColumn({ name: 'id_rol' })
-  rol: Rol;
+  rol: Relation<Rol>;
 
   @Column({ default: true })
   activo: boolean;
