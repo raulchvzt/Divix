@@ -1,8 +1,7 @@
-import { Bell, LogOut, Menu } from 'lucide-react'
+import { LogOut, Menu } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { obtenerUsuario, cerrarSesion } from '../../api/auth'
-import { corteActivo } from '../../api/operaciones'
-import { useCarga } from '../../api/useCarga'
+import Notificaciones from './Notificaciones'
 
 const ROLES = { administrador: 'Administrador', cajero: 'Cajero' }
 
@@ -26,10 +25,9 @@ function fechaHoy() {
   return f.charAt(0).toUpperCase() + f.slice(1)
 }
 
-export default function Topbar({ onMenu = () => {} }) {
+export default function Topbar({ onMenu = () => {}, corte = null, avisos = [] }) {
   const navigate = useNavigate()
   const usuario = obtenerUsuario() ?? { nombre: 'Usuario', rol: '' }
-  const { datos: corte } = useCarga(corteActivo)
 
   const salir = () => {
     cerrarSesion()
@@ -60,10 +58,7 @@ export default function Topbar({ onMenu = () => {} }) {
         </div>
 
         {/* Notificaciones */}
-        <button className="hidden sm:block relative text-slate-600 hover:text-slate-900">
-          <Bell size={22} strokeWidth={1.8} />
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-white" />
-        </button>
+        <Notificaciones avisos={avisos} />
 
         {/* Usuario */}
         <div className="flex items-center gap-3">
