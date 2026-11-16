@@ -1,0 +1,5 @@
+# Dependencias y archivos locales de la raíz (backend/ y frontend/ tienen su propio .gitignore)
+node_modules/
+.env
+.DS_Store
+*.log
