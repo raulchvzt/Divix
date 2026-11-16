@@ -9,13 +9,17 @@ import { dinero } from '../utils/formato'
 import TablaTransacciones from '../components/ventanilla/TablaTransacciones'
 import { resumenDia, corteActivo } from '../api/operaciones'
 import { useCarga } from '../api/useCarga'
+import { avisarCambioCaja } from '../hooks/useEstadoCaja'
 
 export default function Ventanilla() {
   const navigate = useNavigate()
   const [version, setVersion] = useState(0)
   const { datos: resumen } = useCarga(resumenDia, [version])
   const { datos: corte, cargando: cargandoCorte } = useCarga(corteActivo, [version])
-  const recargar = () => setVersion((v) => v + 1)
+  const recargar = () => {
+    setVersion((v) => v + 1)
+    avisarCambioCaja()
+  }
 
   return (
     <div>

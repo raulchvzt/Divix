@@ -335,7 +335,13 @@ export class JsonRepository<T = any> {
       for (const col of meta.columnas) {
         if (col.modo === 'createDate' || col.modo === 'updateDate') {
           entidad[col.propiedad] = new Date(reg[col.propiedad]);
-        } else if (entidad[col.propiedad] === undefined && reg[col.propiedad] !== undefined) {
+        } else if (
+          // Las columnas ocultas (select: false, p. ej. el hash de la contraseña)
+          // no se copian: igual que TypeORM, no deben salir en la respuesta.
+          !col.oculta &&
+          entidad[col.propiedad] === undefined &&
+          reg[col.propiedad] !== undefined
+        ) {
           entidad[col.propiedad] = reg[col.propiedad];
         }
       }

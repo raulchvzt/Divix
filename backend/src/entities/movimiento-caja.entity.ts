@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  type Relation,
 } from 'typeorm';
 import { CorteCaja } from './corte-caja.entity';
 import { Usuario } from './usuario.entity';
@@ -23,11 +24,11 @@ export class MovimientoCaja {
 
   @ManyToOne(() => CorteCaja, (corte) => corte.movimientos)
   @JoinColumn({ name: 'id_corte' })
-  corte: CorteCaja;
+  corte: Relation<CorteCaja>;
 
   @ManyToOne(() => Usuario, (usuario) => usuario.movimientosCaja)
   @JoinColumn({ name: 'id_usuario' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   @Column({ name: 'tipo_movimiento', type: 'enum', enum: TipoMovimiento })
   tipoMovimiento: TipoMovimiento;
