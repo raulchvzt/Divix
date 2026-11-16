@@ -1,12 +1,10 @@
 import { LogOut, Menu } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { obtenerUsuario, cerrarSesion } from '../../api/auth'
 import Notificaciones from './Notificaciones'
+import Avatar from '../Avatar'
 
 const ROLES = { administrador: 'Administrador', cajero: 'Cajero' }
-
-const iniciales = (nombre) =>
-  nombre.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('')
 
 function saludo() {
   const h = new Date().getHours()
@@ -25,9 +23,12 @@ function fechaHoy() {
   return f.charAt(0).toUpperCase() + f.slice(1)
 }
 
-export default function Topbar({ onMenu = () => {}, corte = null, avisos = [] }) {
+export default function Topbar({ onMenu = () => {}, corte = null, avisos = [], perfil = null }) {
   const navigate = useNavigate()
-  const usuario = obtenerUsuario() ?? { nombre: 'Usuario', rol: '' }
+  const sesion = obtenerUsuario() ?? { nombre: 'Usuario', rol: '' }
+  // El perfil trae los datos más recientes (si se editaron); la sesión es el respaldo.
+  const usuario = { ...sesion, nombre: perfil?.nombre ?? sesion.nombre }
+  const nombreCompleto = perfil ? `${perfil.nombre} ${perfil.apellidoPaterno ?? ''}`.trim() : usuario.nombre
 
   const salir = () => {
     cerrarSesion()
@@ -62,13 +63,17 @@ export default function Topbar({ onMenu = () => {}, corte = null, avisos = [] })
 
         {/* Usuario */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-ink-800 text-white text-xs font-bold flex items-center justify-center">
-            {iniciales(usuario.nombre)}
-          </div>
-          <div className="hidden md:block text-left leading-tight">
-            <p className="text-sm font-semibold">{usuario.nombre}</p>
-            <p className="text-[11px] text-slate-400">{ROLES[usuario.rol] ?? usuario.rol}</p>
-          </div>
+          <Link
+            to="/perfil"
+            title="Mi perfil"
+            className="flex items-center gap-3 rounded-full md:rounded-xl md:pr-2 hover:bg-slate-50 transition-colors"
+          >
+            <Avatar nombre={nombreCompleto} foto={perfil?.foto} />
+            <div className="hidden md:block text-left leading-tight">
+              <p className="text-sm font-semibold">{nombreCompleto}</p>
+              <p className="text-[11px] text-slate-400">{ROLES[usuario.rol] ?? usuario.rol}</p>
+            </div>
+          </Link>
           <button onClick={salir} title="Cerrar sesión" className="text-slate-400 hover:text-slate-700 transition-colors">
             <LogOut size={18} />
           </button>

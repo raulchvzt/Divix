@@ -14,6 +14,7 @@ import { UsuariosService } from '../../services/usuarios.service';
 import { CrearUsuarioDto } from '../../dto/usuarios/crear-usuario.dto';
 import { ActualizarUsuarioDto } from '../../dto/usuarios/actualizar-usuario.dto';
 import { CambiarPasswordDto } from '../../dto/usuarios/cambiar-password.dto';
+import { ActualizarPerfilDto } from '../../dto/usuarios/actualizar-perfil.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -23,6 +24,24 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Controller('usuarios')
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
+
+  // ---- Perfil propio (cualquier usuario con sesión). Van antes de ":id". ----
+
+  @Get('me')
+  perfil(@CurrentUser('sub') idUsuario: number) {
+    return this.usuariosService.obtenerPerfil(idUsuario);
+  }
+
+  @Patch('me')
+  actualizarPerfil(
+    @CurrentUser('sub') idUsuario: number,
+    @CurrentUser('rol') rol: string,
+    @Body() dto: ActualizarPerfilDto,
+  ) {
+    return this.usuariosService.actualizarPerfil(idUsuario, rol, dto);
+  }
+
+  // ---- Administración de usuarios ----
 
   @Roles('administrador')
   @Get()

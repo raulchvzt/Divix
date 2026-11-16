@@ -40,6 +40,11 @@ export class Usuario {
   @Column({ name: 'contrasena_hash', length: 255, select: false })
   contrasenaHash: string;
 
+  // Foto de perfil como data URL (JPEG pequeño que recorta el navegador).
+  // select: false para no cargarla en listados; se pide solo en el perfil.
+  @Column({ type: 'mediumtext', nullable: true, select: false })
+  foto: string | null;
+
   @ManyToOne(() => Rol, (rol) => rol.usuarios)
   @JoinColumn({ name: 'id_rol' })
   rol: Relation<Rol>;
