@@ -154,8 +154,8 @@ export class ReferenciaMercadoService implements OnModuleInit {
     const filas: Fila[] = [];
     const agregar = (fecha: unknown, valor: unknown) => {
       const v = new Decimal(String(valor));
-      if (fecha && v.isFinite() && v.gt(0))
-        filas.push({ fecha: String(fecha).slice(0, 10), valor: v });
+      if (typeof fecha === 'string' && fecha && v.isFinite() && v.gt(0))
+        filas.push({ fecha: fecha.slice(0, 10), valor: v });
     };
     const lista = Array.isArray(json)
       ? json
