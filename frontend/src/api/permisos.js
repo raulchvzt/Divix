@@ -9,6 +9,7 @@ export const PANTALLAS = {
   '/operaciones': { roles: ['administrador', 'cajero'] },
   '/estadisticas': { roles: ['administrador', 'cajero'] },
   '/configuracion': { roles: ['administrador'] },
+  '/perfil': { roles: ['administrador', 'cajero'] },
 }
 
 export const rolActual = () => obtenerUsuario()?.rol ?? null
