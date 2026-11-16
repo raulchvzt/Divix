@@ -82,15 +82,15 @@ export class UsuariosService {
     // se quita para que nunca viaje en la respuesta HTTP.
     const { contrasenaHash: _hash, ...sinHash } = guardado;
     const conRol = await this.obtenerPorId(sinHash.id);
-    return temporal ? { ...conRol, contrasenaTemporal: temporal } : conRol;
+    return temporal ? Object.assign(conRol, { contrasenaTemporal: temporal }) : conRol;
   }
 
   async actualizar(id: number, dto: ActualizarUsuarioDto) {
     const usuario = await this.obtenerPorId(id);
-    Object.assign(usuario, {
-      ...dto,
-      rol: dto.idRol ? ({ id: dto.idRol } as any) : usuario.rol,
-    });
+    if (dto.nombre !== undefined) usuario.nombre = dto.nombre;
+    if (dto.apellidoPaterno !== undefined) usuario.apellidoPaterno = dto.apellidoPaterno;
+    if (dto.apellidoMaterno !== undefined) usuario.apellidoMaterno = dto.apellidoMaterno;
+    if (dto.idRol) usuario.rol = { id: dto.idRol } as any;
     return this.usuariosRepo.save(usuario);
   }
 

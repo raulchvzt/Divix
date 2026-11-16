@@ -27,7 +27,7 @@ export class MonedasService {
     const existente = await this.monedasRepo.findOne({ where: { codigo: dto.codigo.toUpperCase() } });
     if (existente) throw new ConflictException('Ya existe una moneda con ese código');
     const codigo = dto.codigo.toUpperCase();
-    const moneda = this.monedasRepo.create({ ...dto, codigo, simbolo: dto.simbolo ?? codigo });
+    const moneda = this.monedasRepo.create({ codigo, nombre: dto.nombre, simbolo: dto.simbolo ?? codigo });
     return this.monedasRepo.save(moneda);
   }
 
