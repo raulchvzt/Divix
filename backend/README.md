@@ -30,7 +30,8 @@ Todas piden sesión (`Authorization: Bearer <token>`) salvo `/auth/login` y `/au
 | Área | Rutas |
 |---|---|
 | Sesión | `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` |
-| Usuarios (admin) | `GET /usuarios` · `GET/PATCH /usuarios/:id` · `POST /usuarios` · `PATCH /usuarios/:id/activar` · `PATCH /usuarios/:id/desactivar` · `PATCH /usuarios/me/password` (cualquiera) |
+| Mi perfil (cualquiera) | `GET /usuarios/me` · `PATCH /usuarios/me` (foto; nombre y correo solo admin) · `PATCH /usuarios/me/password` |
+| Usuarios (admin) | `GET /usuarios` · `GET/PATCH /usuarios/:id` · `POST /usuarios` · `PATCH /usuarios/:id/activar` · `PATCH /usuarios/:id/desactivar` |
 | Roles (admin) | `GET /roles` · `POST /roles` · `PATCH /roles/:id` |
 | Clientes | `GET /clientes` · `GET /clientes/:id` · `POST /clientes` · `PATCH /clientes/:id` · `GET /clientes/:id/operaciones` · `PATCH /clientes/:id/desactivar` (admin) |
 | Divisas | `GET /monedas` · `POST /monedas`, `PATCH /monedas/:id`, `/activar`, `/desactivar` (admin) |

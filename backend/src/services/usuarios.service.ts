@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,6 +13,7 @@ import { Usuario } from '../entities/usuario.entity';
 import { CrearUsuarioDto } from '../dto/usuarios/crear-usuario.dto';
 import { ActualizarUsuarioDto } from '../dto/usuarios/actualizar-usuario.dto';
 import { CambiarPasswordDto } from '../dto/usuarios/cambiar-password.dto';
+import { ActualizarPerfilDto } from '../dto/usuarios/actualizar-perfil.dto';
 
 const RONDAS_SALT = 10;
 
@@ -121,5 +123,48 @@ export class UsuariosService {
     usuario.contrasenaHash = await bcrypt.hash(dto.contrasenaNueva, RONDAS_SALT);
     await this.usuariosRepo.save(usuario);
     return { mensaje: 'Contraseña actualizada correctamente' };
+  }
+
+  /** Perfil propio, con la foto (que no sale en los listados). */
+  async obtenerPerfil(id: number) {
+    const usuario = await this.usuariosRepo
+      .createQueryBuilder('usuario')
+      .addSelect('usuario.foto')
+      .leftJoinAndSelect('usuario.rol', 'rol')
+      .where('usuario.id = :id', { id })
+      .getOne();
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+    // La base JSON trae todas las columnas ocultas con addSelect: el hash nunca sale.
+    const { contrasenaHash: _hash, ...perfil } = usuario;
+    return { ...perfil, foto: perfil.foto ?? null };
+  }
+
+  /**
+   * Cambios al perfil propio. Cualquiera cambia su foto; nombre, apellidos y
+   * correo solo el administrador (el resto los pide al administrador, porque
+   * salen en tickets y cortes).
+   */
+  async actualizarPerfil(id: number, rol: string, dto: ActualizarPerfilDto) {
+    const datosPersonales = (['nombre', 'apellidoPaterno', 'apellidoMaterno', 'correo'] as const).filter(
+      (c) => dto[c] !== undefined,
+    );
+    if (datosPersonales.length && rol !== 'administrador') {
+      throw new ForbiddenException('Solo el administrador puede cambiar nombre y correo');
+    }
+
+    const usuario = await this.obtenerPorId(id);
+    if (dto.correo !== undefined) {
+      const correo = dto.correo.trim().toLowerCase();
+      const otro = await this.usuariosRepo.findOne({ where: { correo } });
+      if (otro && otro.id !== id) throw new ConflictException('Ya existe un usuario con ese correo');
+      usuario.correo = correo;
+    }
+    if (dto.nombre !== undefined) usuario.nombre = dto.nombre.trim();
+    if (dto.apellidoPaterno !== undefined) usuario.apellidoPaterno = dto.apellidoPaterno.trim();
+    if (dto.apellidoMaterno !== undefined) usuario.apellidoMaterno = dto.apellidoMaterno.trim();
+    if (dto.foto !== undefined) usuario.foto = dto.foto;
+
+    await this.usuariosRepo.save(usuario);
+    return this.obtenerPerfil(id);
   }
 }
