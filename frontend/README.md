@@ -1,36 +1,58 @@
-# Divix — frontend de acceso
+# Divix · Frontend
 
-React, JavaScript con JSX y CSS nativo, ejecutados con Vite. Sin router ni backend implementado.
+Aplicación web de Divix hecha con **React 19**, **Vite** y **Tailwind CSS 4**. Se conecta al backend de Divix por su API.
 
-## Revisar el login
+> Para levantar todo el proyecto (backend + frontend) sigue el [README principal](../README.md). Aquí está el detalle del frontend.
 
-1. Ejecutar `npm install` si es necesario y `npm run dev`.
-2. Abrir la URL local indicada por Vite.
-3. Probar el formulario con teclado, Enter, mostrar/ocultar contraseña y tamaños móviles.
+## Pantallas
 
-### Datos ficticios (solo desarrollo)
+| Ruta | Pantalla | Quién |
+|---|---|---|
+| `/login` | Inicio de sesión | Todos |
+| `/` | **Ventanilla**: resumen del día, operación rápida con ticket imprimible y últimas transacciones | Admin y cajero |
+| `/tipos-de-cambio` | Precios por divisa comparados con el mercado y sugerencia de precios | Admin edita, cajero consulta |
+| `/caja` | Apertura, movimientos, reposición y cierre de caja, con billetes de USD | Admin y cajero |
+| `/operaciones` | Historial con búsqueda y filtros | Admin y cajero |
+| `/estadisticas` | Indicadores, gráficas y pronóstico de demanda | Admin y cajero |
+| `/configuracion` | Usuarios, divisas y datos del negocio | Admin |
 
-| Usuario | Contraseña | Nombre | Rol |
-| --- | --- | --- | --- |
-| `cajero.demo` | `DivixDemo123!` | Alex Martínez | Cajero |
-| `admin.demo` | `DivixDemo123!` | Andrea López | Administrador |
+En todas las pantallas hay un menú lateral con el estado real de la caja, una campana con avisos (caja cerrada, precios en pérdida, mercado movido) y el asistente **Divix AI**.
 
-Cualquier otra combinación produce un error de credenciales. Un usuario vacío o de espacios y una contraseña vacía se rechazan antes del envío. La contraseña nunca se recorta.
+Qué rol ve qué pantalla se define en un solo lugar: `src/api/permisos.js`. El backend valida lo mismo.
 
-La simulación está habilitada únicamente con `import.meta.env.DEV` y se identifica como «Modo demostración». Solo muestra una confirmación; no crea sesiones ni guarda datos en localStorage.
+## Estructura
 
-Para comprobar producción: `npm run build` y `npm run preview`, y abrir la URL indicada. Con datos no vacíos debe mostrar que el servicio no está disponible, sin conceder acceso simulado.
+```
+frontend/src/
+├── App.jsx               Rutas
+├── pages/                Una por pantalla
+├── components/
+│   ├── layout/           Menú lateral, encabezado y campana de avisos
+│   ├── ventanilla/       Operación rápida, ticket, Divix AI, aviso del mercado
+│   ├── tipos-de-cambio/  Tarjeta de divisa y comparación con el mercado
+│   ├── configuracion/    Pestañas de usuarios, divisas y negocio
+│   └── estadisticas/     Pronóstico de demanda
+├── api/                  Llamadas al backend (client.js agrega la sesión y renueva el token)
+├── hooks/                Estado compartido (caja del usuario)
+└── utils/                Formato de dinero, billetes, avisos, catálogo de divisas ISO 4217
+```
 
-## Integración pendiente con backend
+## Variables de entorno
 
-Sustituir la simulación en `src/services/auth.js` cuando se acuerden:
+Copia `.env.example` como `.env`:
 
-- URL base y endpoint, método y campos de la solicitud (usuario y contraseña).
-- Respuesta con identidad y rol, y formato de errores de credenciales y disponibilidad.
-- Cookies o tokens, expiración, cierre de sesión y protección de solicitudes.
-- CORS, HTTPS y configuración por entorno.
-- Autorización de roles en el servidor: el frontend no concede permisos.
+| Variable | Para qué |
+|---|---|
+| `VITE_API_URL` | Dirección del backend (por defecto `http://localhost:3000`). |
 
-No existe un endpoint configurado ni se realiza una petición real. Los destinos posteriores al acceso quedan fuera del alcance.
+## Comandos
 
-Validaciones de código: `npm run lint` y `npm run build`.
+```bash
+npm install       # instalar dependencias
+npm run dev       # servidor de desarrollo en http://localhost:5173
+npm run build     # compilar a dist/
+npm run preview   # ver lo compilado
+npm run lint      # revisar el código
+```
+
+Si cambias el puerto del frontend, agrega la nueva dirección a `CORS_ORIGIN` en el `.env` del backend.

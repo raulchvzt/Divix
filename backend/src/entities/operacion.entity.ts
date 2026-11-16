@@ -6,6 +6,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   Index,
+  type Relation,
 } from 'typeorm';
 import { Cliente } from './cliente.entity';
 import { Usuario } from './usuario.entity';
@@ -29,19 +30,19 @@ export class Operacion {
 
   @ManyToOne(() => Cliente, (cliente) => cliente.operaciones)
   @JoinColumn({ name: 'id_cliente' })
-  cliente: Cliente;
+  cliente: Relation<Cliente>;
 
   @ManyToOne(() => Usuario, (usuario) => usuario.operaciones)
   @JoinColumn({ name: 'id_usuario' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   @ManyToOne(() => Moneda, (moneda) => moneda.operaciones)
   @JoinColumn({ name: 'id_moneda' })
-  moneda: Moneda;
+  moneda: Relation<Moneda>;
 
   @ManyToOne(() => TipoCambio, (tc) => tc.operaciones)
   @JoinColumn({ name: 'id_tipo_cambio' })
-  tipoCambio: TipoCambio;
+  tipoCambio: Relation<TipoCambio>;
 
   @Column({ name: 'tipo_operacion', type: 'enum', enum: TipoOperacion })
   tipoOperacion: TipoOperacion;

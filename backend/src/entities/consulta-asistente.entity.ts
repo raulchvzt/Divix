@@ -6,6 +6,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   Index,
+  type Relation,
 } from 'typeorm';
 import { Usuario } from './usuario.entity';
 
@@ -22,7 +23,7 @@ export class ConsultaAsistente {
 
   @ManyToOne(() => Usuario, (usuario) => usuario.consultasAsistente)
   @JoinColumn({ name: 'id_usuario' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   // Agrupa las preguntas de una misma conversación (UUID generado al iniciarla).
   // Nulo en las consultas anteriores a que existieran las conversaciones.

@@ -65,12 +65,18 @@ npm run dev
 
 ## Cómo trabajamos
 
-1. Crea una rama desde `main` para tu tarea: `git checkout -b tu-nombre-tarea`.
+- `main`: versión estable, la que se entrega.
+- `develop`: donde se juntan los cambios del equipo.
+
+1. Actualiza `develop` y crea tu rama desde ahí: `git checkout develop && git pull && git checkout -b tu-nombre-tarea`.
 2. Haz tus cambios. Pueden tocar `backend/` y `frontend/` en el mismo PR.
-3. Abre un Pull Request hacia `main`, pide revisión y haz merge.
-4. `main` siempre debe funcionar: es lo que se entrega.
+3. Antes de subir, corre `npm run lint`.
+4. Abre un Pull Request hacia `develop`, pide revisión y haz merge.
+5. Cuando `develop` esté probado, se pasa a `main` con otro PR.
 
 Los archivos `.env` **no se suben** a GitHub; cada quien tiene el suyo.
+
+Más detalle de cada parte en [backend/README.md](backend/README.md) y [frontend/README.md](frontend/README.md).
 
 ## Historia del repositorio
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Wallet, Vault, ArrowRightLeft, Check } from 'lucide-react'
 import { dinero } from '../utils/formato'
 import { useCarga } from '../api/useCarga'
+import { avisarCambioCaja } from '../hooks/useEstadoCaja'
 import InputNumero from '../components/InputNumero'
 import SelectorBilletes from '../components/SelectorBilletes'
 import { billetesVacios, billetesValidos, cantidadBilletes } from '../utils/billetes'
@@ -90,6 +91,7 @@ export default function Caja() {
       await accion()
       setMensaje(aviso)
       setVersion((v) => v + 1)
+      avisarCambioCaja()
       return true
     } catch (e) {
       setError(e.message)

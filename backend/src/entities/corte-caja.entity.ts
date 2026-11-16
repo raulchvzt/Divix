@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
+  type Relation,
 } from 'typeorm';
 import { Usuario } from './usuario.entity';
 import { MovimientoCaja } from './movimiento-caja.entity';
@@ -19,7 +20,7 @@ export class CorteCaja {
 
   @ManyToOne(() => Usuario, (usuario) => usuario.cortesCaja)
   @JoinColumn({ name: 'id_usuario' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   @Column({ name: 'fecha_apertura', type: 'datetime' })
   fechaApertura: Date;

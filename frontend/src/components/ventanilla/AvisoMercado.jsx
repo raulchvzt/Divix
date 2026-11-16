@@ -46,11 +46,11 @@ export default function AvisoMercado({ esAdministrador }) {
     .join(' · ')
 
   return (
-    <div className="mb-6 flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+    <div className="mb-6 flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
       <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
         <AlertTriangle size={20} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1 basis-[200px]">
         <p className="text-sm font-bold text-amber-900">El mercado se movió desde la última actualización de precios</p>
         <p className="text-sm text-amber-800 mt-0.5">
           {detalle}.{' '}

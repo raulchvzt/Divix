@@ -1,118 +1,84 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Divix · Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de Divix hecha con **NestJS 12** y **TypeORM**. Guarda los datos en **MySQL** o, para desarrollo, en una **base JSON** en archivos que no necesita instalar nada.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> Para levantar todo el proyecto (backend + frontend) sigue el [README principal](../README.md). Aquí está el detalle del backend.
 
-## Description
+## Estructura
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+backend/
+├── src/
+│   ├── main.ts               Arranque del servidor
+│   ├── configurar-app.ts     CORS y validación (lo comparten main.ts y las pruebas)
+│   ├── app.module.ts         Une todos los módulos
+│   ├── modules/              Un controlador por área (rutas HTTP)
+│   ├── services/             La lógica de cada área
+│   ├── entities/             Tablas (TypeORM)
+│   ├── dto/                  Qué datos acepta cada ruta y sus reglas
+│   ├── common/               Guardas de sesión y rol, saldos de caja, billetes de USD
+│   └── database/             Conexión a MySQL o a la base JSON (con su siembra inicial)
+├── sql/                      Cambios de estructura para MySQL (se ejecutan a mano)
+├── test/                     Configuración de pruebas e2e
+└── data/                     Base JSON local (se crea sola, no se sube a GitHub)
 ```
 
-## Compile and run the project
+## Rutas
+
+Todas piden sesión (`Authorization: Bearer <token>`) salvo `/auth/login` y `/auth/refresh`. Entre paréntesis, quién puede usarlas cuando no son para los dos roles.
+
+| Área | Rutas |
+|---|---|
+| Sesión | `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` |
+| Usuarios (admin) | `GET /usuarios` · `GET/PATCH /usuarios/:id` · `POST /usuarios` · `PATCH /usuarios/:id/activar` · `PATCH /usuarios/:id/desactivar` · `PATCH /usuarios/me/password` (cualquiera) |
+| Roles (admin) | `GET /roles` · `POST /roles` · `PATCH /roles/:id` |
+| Clientes | `GET /clientes` · `GET /clientes/:id` · `POST /clientes` · `PATCH /clientes/:id` · `GET /clientes/:id/operaciones` · `PATCH /clientes/:id/desactivar` (admin) |
+| Divisas | `GET /monedas` · `POST /monedas`, `PATCH /monedas/:id`, `/activar`, `/desactivar` (admin) |
+| Tipos de cambio | `GET /tipos-cambio/actual` · `GET /tipos-cambio/historial/:idMoneda` · `POST /tipos-cambio` (admin) |
+| Referencia del mercado | `GET /referencia-mercado` · `POST /referencia-mercado/actualizar` (admin) |
+| Operaciones | `GET /operaciones` · `GET /operaciones/resumen-dia` · `GET /operaciones/:id` · `POST /operaciones` |
+| Caja y cortes | `POST /cortes-caja/abrir` · `GET /cortes-caja/activo` · `GET /cortes-caja/ultimo-cierre` · `POST /cortes-caja/:id/movimientos` · `POST /cortes-caja/:id/cerrar` · `GET /cortes-caja` · `GET /cortes-caja/:id` · `GET /movimientos-caja/corte/:idCorte` |
+| Pronóstico de demanda | `GET /pronostico-demanda` |
+| Divix AI | `POST /asistente-ia/consultar` · `GET /asistente-ia/conversaciones` · `GET /asistente-ia/conversaciones/:id` · `GET /asistente-ia/historial` · `GET /asistente-ia/historial/todas` (admin) |
+| Negocio | `GET /negocio` · `PUT /negocio` (admin) |
+
+### Reglas importantes
+
+- Los importes viajan como **texto** (`"1250.50"`) y se calculan con `decimal.js`, para no perder centavos.
+- Todo lo que llega se valida con los DTO; los campos que no están en el DTO se descartan.
+- Para registrar una operación el usuario debe tener su **caja abierta** y saldo suficiente: no se puede vender más divisa ni pagar más pesos de los que hay en su caja.
+- En USD se lleva el control de **billetes por denominación** (`common/billetes.ts`).
+
+## Variables de entorno
+
+Copia `.env.example` como `.env` y llénalo. Las principales:
+
+| Variable | Para qué |
+|---|---|
+| `JWT_SECRET` | **Obligatoria.** Clave para firmar las sesiones. |
+| `PORT` | Puerto del servidor (3000). |
+| `CORS_ORIGIN` | Dirección del frontend (varias separadas por coma). |
+| `DB_DRIVER` | `json` (desarrollo) o `mysql`. |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexión a MySQL. |
+| `SEED_PASSWORD` | Contraseña de `admin` y `cajero1` en la base JSON. |
+| `SEED_DEMO` | `false` para no generar las operaciones ficticias de la demo. |
+| `IA_PROVEEDOR`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY` | Divix AI. Sin clave, el asistente avisa que no está configurado. |
+| `REFERENCIA_MERCADO`, `BANXICO_TOKEN`, `REFERENCIA_UMBRAL_PCT` | Precio del mercado (Banxico FIX o Banco Central Europeo). |
+
+## Base JSON
+
+Con `DB_DRIVER=json` todo se guarda en `backend/data/`. Si la carpeta está vacía, al arrancar se crean los roles, los usuarios `admin` y `cajero1`, las divisas USD y EUR con un tipo de cambio de ejemplo y, si `SEED_DEMO` no es `false`, dos años de operaciones ficticias. Para empezar de cero basta con borrar la carpeta.
+
+## Comandos
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install          # instalar dependencias
+npm run start:dev    # servidor con recarga automática
+npm run build        # compilar a dist/
+npm run start:prod   # correr lo compilado
+npm run lint         # revisar el código
+npm test             # pruebas unitarias (src/**/*.spec.ts)
+npm run test:e2e     # pruebas del flujo completo (test/*.e2e-spec.ts)
 ```
 
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-This project is already instrumented. Create a free account at [observe.nestjs.com](https://observe.nestjs.com), add an application, and paste the generated app key and secret into the `ObserveModule.forRoot()` call in `src/app.module.ts`.
-
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Jest ya está configurado para NestJS 12 (modo ESM). Para pruebas e2e, usa `configurarApp(app)` de `src/configurar-app.ts` para que validen igual que el servidor real.
