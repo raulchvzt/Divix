@@ -57,7 +57,6 @@ npm run dev
 | `npm run dev:frontend` | Solo el frontend |
 | `npm run build` | Compila los dos |
 | `npm run lint` | Revisa el código de los dos |
-| `npm test` | Corre las pruebas del backend (unitarias y e2e) |
 
 ## Base de datos
 
@@ -71,7 +70,7 @@ npm run dev
 
 1. Actualiza `develop` y crea tu rama desde ahí: `git checkout develop && git pull && git checkout -b tu-nombre-tarea`.
 2. Haz tus cambios. Pueden tocar `backend/` y `frontend/` en el mismo PR.
-3. Antes de subir, corre `npm run lint` y `npm test`.
+3. Antes de subir, corre `npm run lint`.
 4. Abre un Pull Request hacia `develop`, pide revisión y haz merge.
 5. Cuando `develop` esté probado, se pasa a `main` con otro PR.
 

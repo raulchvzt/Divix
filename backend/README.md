@@ -19,7 +19,7 @@ backend/
 │   ├── common/               Guardas de sesión y rol, saldos de caja, billetes de USD
 │   └── database/             Conexión a MySQL o a la base JSON (con su siembra inicial)
 ├── sql/                      Cambios de estructura para MySQL (se ejecutan a mano)
-├── test/                     Pruebas e2e
+├── test/                     Configuración de pruebas e2e
 └── data/                     Base JSON local (se crea sola, no se sube a GitHub)
 ```
 
@@ -81,4 +81,4 @@ npm test             # pruebas unitarias (src/**/*.spec.ts)
 npm run test:e2e     # pruebas del flujo completo (test/*.e2e-spec.ts)
 ```
 
-Las pruebas e2e levantan la app con una base JSON nueva en una carpeta temporal: no tocan `backend/data` ni MySQL y no necesitan `.env`.
+Jest ya está configurado para NestJS 12 (modo ESM). Para pruebas e2e, usa `configurarApp(app)` de `src/configurar-app.ts` para que validen igual que el servidor real.
