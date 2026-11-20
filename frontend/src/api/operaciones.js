@@ -12,6 +12,9 @@ const normalizar = (o) => {
     tasa: Number(o.tipoCambioAplicado),
     total: Number(o.importeTotal),
     cajero: o.usuario?.nombre ?? '—',
+    idUsuario: o.usuario?.id,
+    fechaHora: o.fechaHora,
+    billetes: o.billetes ?? null,
   }
 }
 
@@ -34,6 +37,13 @@ export const registrarOperacion = ({ idCliente, idMoneda, tipo, monto, billetes 
     method: 'POST',
     // billetes: solo USD, { "100": 4, "50": 2 } (qué billetes entraron o salieron)
     body: { idCliente, idMoneda, tipoOperacion: tipo, cantidadDivisa: String(monto), ...(billetes ? { billetes } : {}) },
+  })
+
+/** Corrige tipo de cambio y cantidad de una operación del turno abierto (solo administrador). */
+export const modificarOperacion = (id, { tasa, monto, billetes }) =>
+  api(`/operaciones/${id}`, {
+    method: 'PATCH',
+    body: { tipoCambioAplicado: String(tasa), cantidadDivisa: String(monto), ...(billetes ? { billetes } : {}) },
   })
 
 /** Corte abierto del usuario, o null si no hay (o su rol no tiene caja). */

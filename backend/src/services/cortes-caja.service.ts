@@ -10,11 +10,13 @@ import { IsNull, Repository } from 'typeorm';
 import Decimal from 'decimal.js';
 import { CorteCaja } from '../entities/corte-caja.entity';
 import { TipoMovimiento } from '../entities/movimiento-caja.entity';
+import { TipoOperacion } from '../entities/operacion.entity';
 import { AbrirCorteDto } from '../dto/cortes-caja/abrir-corte.dto';
 import { CerrarCorteDto } from '../dto/cortes-caja/cerrar-corte.dto';
 import { CrearMovimientoCajaDto } from '../dto/movimientos-caja/crear-movimiento-caja.dto';
 import { OperacionesService } from './operaciones.service';
 import { MovimientosCajaService } from './movimientos-caja.service';
+import { TiposCambioService } from './tipos-cambio.service';
 import { saldosEsperados } from '../common/saldos-caja';
 import {
   DENOMINACIONES,
@@ -34,6 +36,7 @@ export class CortesCajaService {
     @InjectRepository(CorteCaja)
     private readonly cortesRepo: Repository<CorteCaja>,
     private readonly operacionesService: OperacionesService,
+    private readonly tiposCambioService: TiposCambioService,
     private readonly movimientosCajaService: MovimientosCajaService,
   ) {}
 
@@ -146,7 +149,92 @@ export class CortesCajaService {
       where: { usuario: { id: idUsuario } },
       order: { fechaApertura: 'DESC' },
     });
-    return cortes.find((c) => c.fechaCierre) ?? null;
+    const corte = cortes.find((c) => c.fechaCierre) ?? null;
+    if (!corte) return null;
+    const { ganancia } = await this.ganancia(corte, idUsuario);
+    return { ...corte, ganancia };
+  }
+
+  /**
+   * Costo con el que arranca cada divisa en este corte: el costo promedio con el que
+   * cerró el corte anterior del usuario o, si no lo hay, el precio de compra vigente
+   * al momento de abrir.
+   */
+  private async costosIniciales(corte: CorteCaja, idUsuario: number) {
+    const cortes = await this.cortesRepo.find({
+      where: { usuario: { id: idUsuario } },
+      order: { fechaApertura: 'DESC' },
+    });
+    const anterior = cortes.find(
+      (c) => c.id !== corte.id && c.fechaCierre && new Date(c.fechaCierre) <= new Date(corte.fechaApertura),
+    );
+    const costos: Record<string, Decimal> = {};
+    for (const tc of await this.tiposCambioService.actual()) {
+      const codigo = tc.moneda.codigo.toUpperCase();
+      if (anterior?.costosFinales?.[codigo]) {
+        costos[codigo] = new Decimal(anterior.costosFinales[codigo]);
+        continue;
+      }
+      const historial = await this.tiposCambioService.historialPorMoneda(tc.moneda.id, 1000);
+      const vigente = historial.find((h) => new Date(h.fechaVigencia) <= new Date(corte.fechaApertura));
+      costos[codigo] = new Decimal((vigente ?? tc).tipoCambioCompra);
+    }
+    return costos;
+  }
+
+  /**
+   * Ganancia del turno con costo promedio ponderado por divisa:
+   *   compra: el costo promedio se recalcula con lo que se pagó;
+   *   venta: ganancia = (precio de venta - costo promedio) x cantidad;
+   *   entradas y salidas manuales: cambian la cantidad al costo promedio (sin ganancia).
+   * Devuelve la ganancia (total en MXN y por divisa) y el costo promedio final de cada divisa.
+   */
+  private async ganancia(corte: CorteCaja, idUsuario: number) {
+    const costo = await this.costosIniciales(corte, idUsuario);
+    const cantidad: Record<string, Decimal> = {};
+    for (const c of Object.keys(costo)) cantidad[c] = new Decimal(corte.saldosIniciales?.[c] ?? 0);
+
+    const operaciones = await this.operacionesService.entre(
+      idUsuario,
+      corte.fechaApertura,
+      corte.fechaCierre ?? new Date(),
+    );
+    const movimientos = await this.movimientosCajaService.listarPorCorte(corte.id);
+    const eventos = [
+      ...operaciones.map((op) => ({ fecha: new Date(op.fechaHora), op, mov: null as null | (typeof movimientos)[number] })),
+      ...movimientos.map((mov) => ({ fecha: new Date(mov.fechaHora), op: null as null | (typeof operaciones)[number], mov })),
+    ].sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+
+    const porDivisa: Record<string, Decimal> = {};
+    let total = new Decimal(0);
+    for (const { op, mov } of eventos) {
+      if (op) {
+        const c = op.moneda.codigo.toUpperCase();
+        const cant = new Decimal(op.cantidadDivisa);
+        const precio = new Decimal(op.tipoCambioAplicado);
+        const actual = cantidad[c] ?? new Decimal(0);
+        const promedio = costo[c] ?? precio;
+        if (op.tipoOperacion === TipoOperacion.COMPRA) {
+          costo[c] = actual.gt(0) ? actual.times(promedio).plus(cant.times(precio)).div(actual.plus(cant)) : precio;
+          cantidad[c] = actual.plus(cant);
+        } else {
+          const margen = precio.minus(promedio).times(cant);
+          porDivisa[c] = (porDivisa[c] ?? new Decimal(0)).plus(margen);
+          total = total.plus(margen);
+          costo[c] = promedio;
+          cantidad[c] = actual.minus(cant);
+        }
+      } else if (mov) {
+        const c = mov.moneda.toUpperCase();
+        if (c === MXN || cantidad[c] === undefined) continue;
+        if (mov.tipoMovimiento === TipoMovimiento.ENTRADA) cantidad[c] = cantidad[c].plus(mov.monto);
+        if (mov.tipoMovimiento === TipoMovimiento.SALIDA) cantidad[c] = cantidad[c].minus(mov.monto);
+      }
+    }
+    return {
+      ganancia: { total: total.toFixed(4), porDivisa: this.aTexto(porDivisa) },
+      costosFinales: this.aTexto(costo),
+    };
   }
 
   async abrir(dto: AbrirCorteDto, idUsuario: number) {
@@ -291,6 +379,8 @@ export class CortesCajaService {
     corte.totalVentas = esperado.totalVentas.toFixed(4);
     corte.diferencias = this.aTexto(diferencias);
     corte.diferenciaCaja = diferencias[MXN].toFixed(4);
+    // Costo promedio de cada divisa al cerrar: es el costo con el que arranca el siguiente corte.
+    corte.costosFinales = (await this.ganancia(corte, idUsuario)).costosFinales;
 
     // Diferencia por billete (contado - esperado). Solo si el inventario está
     // completo; si no, no se sabe con certeza cuántos de cada uno debía haber.

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   ParseIntPipe,
@@ -10,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { OperacionesService } from '../../services/operaciones.service';
 import { CrearOperacionDto } from '../../dto/operaciones/crear-operacion.dto';
+import { ModificarOperacionDto } from '../../dto/operaciones/modificar-operacion.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -61,5 +63,12 @@ export class OperacionesController {
   @Post()
   crear(@Body() dto: CrearOperacionDto, @CurrentUser('sub') idUsuario: number) {
     return this.operacionesService.crear(dto, idUsuario);
+  }
+
+  // Corregir tipo de cambio y cantidad de una operación del turno abierto.
+  @Roles('administrador')
+  @Patch(':id')
+  modificar(@Param('id', ParseIntPipe) id: number, @Body() dto: ModificarOperacionDto) {
+    return this.operacionesService.modificar(id, dto);
   }
 }

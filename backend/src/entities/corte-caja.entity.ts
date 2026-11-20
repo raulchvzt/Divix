@@ -74,6 +74,11 @@ export class CorteCaja {
   @Column({ name: 'diferencias_billetes', type: 'json', nullable: true })
   diferenciasBilletes: Record<string, number> | null;
 
+  // Costo promedio ponderado por divisa al cerrar { USD: '17.4000', ... }.
+  // Es el costo con el que arranca el siguiente corte.
+  @Column({ name: 'costos_finales', type: 'json', nullable: true })
+  costosFinales: Record<string, string> | null;
+
   @OneToMany(() => MovimientoCaja, (mov) => mov.corte)
   movimientos: MovimientoCaja[];
 }
