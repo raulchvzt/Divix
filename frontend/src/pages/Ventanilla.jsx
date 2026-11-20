@@ -71,7 +71,7 @@ export default function Ventanilla() {
 
       {/* Últimas transacciones */}
       <div className="mt-6">
-        <TablaTransacciones version={version} />
+        <TablaTransacciones version={version} caja={corte ?? null} onModificada={recargar} />
       </div>
 
     </div>

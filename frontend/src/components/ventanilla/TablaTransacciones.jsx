@@ -4,6 +4,8 @@ import { listarOperaciones } from '../../api/operaciones'
 import { useCarga } from '../../api/useCarga'
 import { dinero } from '../../utils/formato'
 import Bandera from '../Bandera'
+import ModificarOperacion from './ModificarOperacion'
+import { obtenerUsuario } from '../../api/auth'
 
 function Etiqueta({ tipo }) {
   const esVenta = tipo === 'venta'
@@ -22,9 +24,16 @@ function Etiqueta({ tipo }) {
 
 const columnas = ['ID / Hora', 'Operación', 'Divisa', 'Monto', 'Tipo de cambio', 'Total MXN', 'Cajero']
 
-export default function TablaTransacciones({ version = 0 }) {
+export default function TablaTransacciones({ version = 0, caja = null, onModificada }) {
   const [busqueda, setBusqueda] = useState('')
+  const [editando, setEditando] = useState(null)
   const { datos, error } = useCarga(listarOperaciones, [version])
+
+  // Solo el administrador modifica, y solo operaciones de su turno abierto.
+  const yo = obtenerUsuario()
+  const esAdmin = yo?.rol === 'administrador'
+  const puedeModificar = (t) =>
+    esAdmin && caja && t.idUsuario === yo?.id && new Date(t.fechaHora) >= new Date(caja.fechaApertura)
 
   const filtradas = (datos ?? []).slice(0, 8).filter((t) =>
     `${t.id} ${t.divisa} ${t.tipo} ${t.cajero}`.toLowerCase().includes(busqueda.toLowerCase())
@@ -60,7 +69,7 @@ export default function TablaTransacciones({ version = 0 }) {
       <table className="w-full min-w-[620px] text-sm">
         <thead>
           <tr className="bg-slate-50 border-y border-line">
-            {columnas.map((c) => (
+            {[...columnas, ...(esAdmin ? [''] : [])].map((c) => (
               <th
                 key={c}
                 className="text-left px-6 py-4 text-[11px] font-semibold tracking-wider text-slate-400 uppercase"
@@ -93,12 +102,24 @@ export default function TablaTransacciones({ version = 0 }) {
               <td className="px-6 py-5 text-slate-600">{dinero(t.tasa)}</td>
               <td className="px-6 py-5 font-bold">{dinero(t.total)}</td>
               <td className="px-6 py-5 text-slate-600">{t.cajero}</td>
+              {esAdmin && (
+                <td className="px-6 py-5 text-right">
+                  {puedeModificar(t) && (
+                    <button
+                      onClick={() => setEditando(t)}
+                      className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:bg-slate-50"
+                    >
+                      Modificar
+                    </button>
+                  )}
+                </td>
+              )}
             </tr>
           ))}
 
           {filtradas.length === 0 && (
             <tr>
-              <td colSpan={columnas.length} className="px-6 py-10 text-center text-slate-400">
+              <td colSpan={columnas.length + (esAdmin ? 1 : 0)} className="px-6 py-10 text-center text-slate-400">
                 {error || 'No se encontraron transacciones.'}
               </td>
             </tr>
@@ -106,6 +127,17 @@ export default function TablaTransacciones({ version = 0 }) {
         </tbody>
       </table>
       </div>
+      {editando && (
+        <ModificarOperacion
+          operacion={editando}
+          caja={caja}
+          onCerrar={() => setEditando(null)}
+          onGuardada={() => {
+            setEditando(null)
+            onModificada?.()
+          }}
+        />
+      )}
     </div>
   )
 }

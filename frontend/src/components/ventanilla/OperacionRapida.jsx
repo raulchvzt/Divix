@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Calculator, Plus, Lock, ArrowRight } from 'lucide-react'
-import { obtenerDivisas } from '../../api/divisas'
+import { obtenerDivisas, guardarTipoCambio } from '../../api/divisas'
 import { registrarOperacion, obtenerClienteGeneral } from '../../api/operaciones'
 import { useCarga } from '../../api/useCarga'
 import { dinero } from '../../utils/formato'
@@ -28,11 +28,40 @@ export default function OperacionRapida({ onRegistrada, caja, cajaCargando, bill
   const [enviando, setEnviando] = useState(false)
   const [ticket, setTicket] = useState(null)
   const [billetes, setBilletes] = useState(billetesVacios)
-  const { datos: divisas, error: errorDivisas } = useCarga(obtenerDivisas)
+  const [version, setVersion] = useState(0)
+  const [tasaNueva, setTasaNueva] = useState(null) // texto del tipo de cambio editado; null si no se ha tocado
+  const [guardandoTasa, setGuardandoTasa] = useState(false)
+  const { datos: divisas, error: errorDivisas } = useCarga(obtenerDivisas, [version])
 
   const divisa = divisas?.find((d) => d.codigo === codigo) ?? divisas?.[0]
   const tasa = divisa ? (tipo === 'venta' ? divisa.venta : divisa.compra) : 0
   const total = Math.round((parseFloat(monto) || 0) * tasa * 100) / 100
+
+  // Cambio rápido del tipo de cambio desde Ventanilla (solo administrador).
+  // Se guarda igual que en la sección Tipos de cambio, así que se refleja en ambas.
+  const puedeEditarTasa = obtenerUsuario()?.rol === 'administrador'
+  const tasaCambiada = tasaNueva !== null && parseFloat(tasaNueva) !== tasa
+
+  const guardarTasa = async () => {
+    setError('')
+    setAviso('')
+    const nueva = parseFloat(tasaNueva)
+    if (!(nueva > 0)) return setError('Escribe un tipo de cambio válido.')
+    const compra = tipo === 'compra' ? nueva : divisa.compra
+    const venta = tipo === 'venta' ? nueva : divisa.venta
+    if (venta < compra) return setError('El precio de venta no puede ser menor al de compra.')
+    setGuardandoTasa(true)
+    try {
+      await guardarTipoCambio(divisa.id, compra, venta)
+      setTasaNueva(null)
+      setVersion((v) => v + 1)
+      setAviso(`Tipo de cambio de ${tipo} de ${divisa.codigo} actualizado.`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setGuardandoTasa(false)
+    }
+  }
 
   // Dólares: se indica qué billetes se entregan (venta) o se reciben (compra).
   const esUsd = divisa?.codigo === 'USD'
@@ -121,7 +150,10 @@ export default function OperacionRapida({ onRegistrada, caja, cajaCargando, bill
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setTipo(t.id)}
+            onClick={() => {
+              setTipo(t.id)
+              setTasaNueva(null)
+            }}
             className={`py-3 rounded-lg text-sm font-semibold transition-colors ${
               tipo === t.id ? 'bg-brand-600 text-white shadow' : 'text-slate-500 hover:text-slate-700'
             }`}
@@ -154,7 +186,10 @@ export default function OperacionRapida({ onRegistrada, caja, cajaCargando, bill
           <label className="block text-sm font-semibold mb-2">Divisa</label>
           <div className="relative">
             {divisa && <Bandera codigo={divisa.codigo} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />}
-            <select value={divisa?.codigo ?? ''} onChange={(e) => setCodigo(e.target.value)} className={`${campo} pl-11!`}>
+            <select value={divisa?.codigo ?? ''} onChange={(e) => {
+              setCodigo(e.target.value)
+              setTasaNueva(null)
+            }} className={`${campo} pl-11!`}>
             {(divisas ?? []).map((d) => (
               <option key={d.codigo} value={d.codigo}>
                 {d.codigo} · {d.nombre}
@@ -192,10 +227,38 @@ export default function OperacionRapida({ onRegistrada, caja, cajaCargando, bill
 
           <div className="sm:col-span-2">
           <label className="block text-sm font-semibold mb-2">Tipo de cambio</label>
-          <div className="flex items-center justify-between bg-slate-50 border border-line rounded-xl px-4 py-3.5 text-sm">
-            <span className="text-slate-500">1 {divisa?.codigo} =</span>
-            <span className="font-semibold">{dinero(tasa)} MXN</span>
-          </div>
+          {puedeEditarTasa && divisa ? (
+            <div className="flex items-center gap-3">
+              <div className="flex flex-1 items-center justify-between gap-3 bg-slate-50 border border-line rounded-xl px-4 py-2 text-sm">
+                <span className="text-slate-500 shrink-0">1 {divisa.codigo} =</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">$</span>
+                  <InputNumero
+                    decimales={4}
+                    value={tasaNueva ?? String(tasa)}
+                    onChange={(e) => setTasaNueva(e.target.value)}
+                    className="w-28 bg-white border border-line rounded-lg px-3 py-1.5 text-right font-semibold outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  />
+                  <span className="font-semibold">MXN</span>
+                </div>
+              </div>
+              {tasaCambiada && (
+                <button
+                  type="button"
+                  onClick={guardarTasa}
+                  disabled={guardandoTasa}
+                  className="rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-3"
+                >
+                  {guardandoTasa ? 'Guardando…' : 'Guardar'}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between bg-slate-50 border border-line rounded-xl px-4 py-3.5 text-sm">
+              <span className="text-slate-500">1 {divisa?.codigo} =</span>
+              <span className="font-semibold">{dinero(tasa)} MXN</span>
+            </div>
+          )}
         </div>
 
         {esUsd && parseFloat(monto) > 0 && (
